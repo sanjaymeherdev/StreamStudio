@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Stream Studio - RTMP relay server with overlay injection. Receive one stream, add overlays, broadcast to multiple platforms.">
+    <meta name="theme-color" content="#0a0c12">
+    <title>Stream Studio - RTMP Relay with Overlay Injection</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="gradient-bg"></div>
+    <div class="noise"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">🎬</div>
+                <span class="logo-text">Stream<span class="highlight">Studio</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Features</a>
+                <a href="#overlays">Overlays</a>
+                <a href="#tech">Tech</a>
+                <a href="#faq">FAQ</a>
+                <a href="#download" class="nav-download">Deploy</a>
+            </div>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        </div>
+    </nav>
+
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#how-it-works">How It Works</a>
+        <a href="#features">Features</a>
+        <a href="#overlays">Overlays</a>
+        <a href="#tech">Tech</a>
+        <a href="#faq">FAQ</a>
+        <a href="#download">Deploy</a>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-pulse"></span>
+                RTMP Relay + Overlay Injector • v1.0.0
+            </div>
+            <h1 class="hero-title animate-title">
+                Inject Overlays Into 
+                <span class="gradient-text">Any Stream</span>
+            </h1>
+            <p class="hero-subtitle">
+                Receive an RTMP stream from OBS, add GIF overlays, alerts, and BRB scenes, 
+                then rebroadcast to multiple platforms. Your camera stays in OBS — Stream Studio adds the polish.
+            </p>
+            <div class="hero-buttons">
+                <a href="#download" class="btn-primary">
+                    <span>🚀</span> Deploy Your Own
+                </a>
+                <a href="#how-it-works" class="btn-secondary">
+                    How It Works →
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-number">1</span>
+                    <span class="stat-label">RTMP Input</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">4+</span>
+                    <span class="stat-label">Outputs</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">GIF</span>
+                    <span class="stat-label">Overlays</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-diagram">
+            <div class="flow-diagram">
+                <div class="flow-step">
+                    <div class="flow-icon">🎥</div>
+                    <span>OBS / XSplit</span>
+                    <div class="arrow">→</div>
+                </div>
+                <div class="flow-step highlight">
+                    <div class="flow-icon">🎬</div>
+                    <span>Stream Studio</span>
+                    <div class="sub">+ GIF overlays<br>+ BRB scenes<br>+ Alerts</div>
+                    <div class="arrow">→→→</div>
+                </div>
+                <div class="flow-outputs">
+                    <span>▶️ YouTube</span>
+                    <span>🎮 Twitch</span>
+                    <span>📘 Facebook</span>
+                    <span>🔴 Custom RTMP</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <h2>How <span class="highlight">It Works</span></h2>
+                <p>Simple 3-step process</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <div class="step-icon">🎥</div>
+                    <h3>Send Your Stream</h3>
+                    <p>Point OBS, XSplit, or any RTMP encoder to your Stream Studio server</p>
+                    <code class="step-code">rtmp://your-server/live/stream-key</code>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <div class="step-icon">✨</div>
+                    <h3>Add Overlays</h3>
+                    <p>Upload GIF overlays, set BRB scenes, configure donation alerts — all server-side</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <div class="step-icon">📡</div>
+                    <h3>Multi-Stream</h3>
+                    <p>Stream Studio forwards your enhanced stream to all platforms simultaneously</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Powerful <span class="highlight">Features</span></h2>
+                <p>Everything you need for professional streaming</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>RTMP Relay</h3>
+                    <p>Receive one RTMP stream, forward to multiple destinations. No re-encoding means zero quality loss.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎞️</div>
+                    <h3>GIF Overlay Injection</h3>
+                    <p>Add animated GIF overlays (logos, alerts, donation goals) directly into the video stream.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🖼️</div>
+                    <h3>Scene Switching</h3>
+                    <p>Configure Starting Soon, BRB, and Ending scenes. Switch with a single API call.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💬</div>
+                    <h3>Alert Integration</h3>
+                    <p>WebSocket support for StreamElements, Streamlabs, and custom alert sources.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Live Dashboard</h3>
+                    <p>Real-time viewer counts, chat aggregation, and stream health monitoring.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎚️</div>
+                    <h3>REST API</h3>
+                    <p>Control everything via API — switch scenes, change overlays, add/remove destinations.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Overlays Section -->
+    <section class="overlays" id="overlays">
+        <div class="container">
+            <div class="section-header">
+                <h2>Overlay <span class="highlight">Gallery</span></h2>
+                <p>What you can inject into your stream</p>
+            </div>
+            <div class="overlays-grid">
+                <div class="overlay-card">
+                    <div class="overlay-preview gif-preview">🎨</div>
+                    <h3>Animated GIFs</h3>
+                    <p>Logos, subscriber alerts, donation goals</p>
+                </div>
+                <div class="overlay-card">
+                    <div class="overlay-preview">⏳</div>
+                    <h3>Starting Soon</h3>
+                    <p>Custom timer + background</p>
+                </div>
+                <div class="overlay-card">
+                    <div class="overlay-preview">✋</div>
+                    <h3>BRB Scene</h3>
+                    <p>Be Right Back with custom message</p>
+                </div>
+                <div class="overlay-card">
+                    <div class="overlay-preview">🏁</div>
+                    <h3>Ending Scene</h3>
+                    <p>Thanks for watching + social links</p>
+                </div>
+                <div class="overlay-card">
+                    <div class="overlay-preview">🔔</div>
+                    <h3>Live Alerts</h3>
+                    <p>New follower, subscriber, tip alerts</p>
+                </div>
+                <div class="overlay-card">
+                    <div class="overlay-preview">💬</div>
+                    <h3>Chat Overlay</h3>
+                    <p>Recent chat messages on screen</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Specs -->
+    <section class="tech" id="tech">
+        <div class="container">
+            <div class="section-header">
+                <h2>Technical <span class="highlight">Specifications</span></h2>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <h4>📡 Protocols</h4>
+                    <ul>
+                        <li>RTMP input (ingest)</li>
+                        <li>RTMP output (to platforms)</li>
+                        <li>WebSocket (alerts/controls)</li>
+                        <li>REST API (management)</li>
+                    </ul>
+                </div>
+                <div class="tech-card">
+                    <h4>🎨 Overlay Engine</h4>
+                    <ul>
+                        <li>GIF animation support</li>
+                        <li>PNG/JPG image overlays</li>
+                        <li>Text with custom fonts</li>
+                        <li>Position & scaling controls</li>
+                    </ul>
+                </div>
+                <div class="tech-card">
+                    <h4>⚙️ Performance</h4>
+                    <ul>
+                        <li>No re-encoding (passthrough)</li>
+                        <li>Sub-100ms latency</li>
+                        <li>Minimal CPU/RAM usage</li>
+                        <li>Handles 4K input</li>
+                    </ul>
+                </div>
+                <div class="tech-card">
+                    <h4>🔗 Destinations</h4>
+                    <ul>
+                        <li>YouTube Live</li>
+                        <li>Twitch</li>
+                        <li>Facebook Live</li>
+                        <li>Custom RTMP servers</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="download" id="download">
+        <div class="container">
+            <div class="download-card">
+                <div class="download-icon">🔄</div>
+                <h2>Deploy Stream Studio</h2>
+                <p>Get your own RTMP relay server with overlay injection</p>
+                <div class="deploy-options">
+                    <a href="#" class="btn-download" id="deployRenderBtn">
+                        <span>▲</span> Deploy to Render (Free)
+                    </a>
+                    <a href="#" class="btn-download secondary" id="deployDockerBtn">
+                        <span>🐳</span> Docker Compose
+                    </a>
+                </div>
+                <div class="server-url">
+                    <label>Your server will be available at:</label>
+                    <code>rtmp://your-server.onrender.com/live/stream-key</code>
+                </div>
+                <div class="download-badges">
+                    <span>✅ No Camera Required</span>
+                    <span>🔗 Works with OBS</span>
+                    <span>🎨 GIF Overlays</span>
+                    <span>📡 Multi-Platform</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq" id="faq">
+        <div class="container">
+            <div class="section-header">
+                <h2>Frequently Asked <span class="highlight">Questions</span></h2>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Do I still need OBS or streaming software?</span>
+                        <button class="faq-toggle">+</button>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! Stream Studio receives RTMP streams from OBS, XSplit, vMix, or any encoder. Your camera, mic, and game capture stay in your streaming software. Stream Studio adds overlays and distributes to multiple platforms.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Does Stream Studio have a camera/PIP option?</span>
+                        <button class="faq-toggle">+</button>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No. Stream Studio does NOT capture camera or encode video. It only receives an existing stream and injects overlays. Your camera is handled by OBS or your streaming software.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>What overlays can I add?</span>
+                        <button class="faq-toggle">+</button>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Animated GIFs, PNG logos, BRB scenes, Starting Soon screens, donation alerts, follower notifications, chat messages, and custom text overlays.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Does re-encoding affect quality?</span>
+                        <button class="faq-toggle">+</button>
+                    </div>
+                    <div class="faq-answer">
+                        <p>No! Stream Studio uses pure passthrough for the main video. Overlays are composited without re-encoding the entire stream, so there's no quality loss.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>Can I run this on free hosting?</span>
+                        <button class="faq-toggle">+</button>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Yes! Deploy to Render free tier (with self-ping keep-alive) or use a cheap VPS. The lightweight design uses minimal resources.</p>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">
+                        <span>How many platforms can I stream to?</span>
+                        <button class="faq-toggle">+</button>
+                    </div>
+                    <div class="faq-answer">
+                        <p>Unlimited! Stream Studio can forward to any number of RTMP destinations simultaneously — YouTube, Twitch, Facebook, Kick, Trovo, or custom servers.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <div class="logo-icon">🎬</div>
+                    <span>Stream<span class="highlight">Studio</span></span>
+                </div>
+                <p class="footer-copyright">© 2025 Stream Studio. RTMP Relay + Overlay Injector</p>
+                <div class="footer-links">
+                    <a href="#">GitHub</a>
+                    <a href="#">Documentation</a>
+                    <a href="#">Discord</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div class="toast" id="toast">Deployment guide copied!</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
