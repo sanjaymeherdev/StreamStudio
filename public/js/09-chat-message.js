@@ -1,0 +1,13 @@
+renderTemplate({
+  name: "chat-message",
+  elements: [
+    { type:'shape', shapeType:'rectangle', x:40, y:900, width:480, height:90, color:'rgba(8,10,16,0.7)', borderRadius:14, zIndex:1 },
+    { type:'shape', shapeType:'circle', x:55, y:915, size:36, color:'#4DFFA0', zIndex:2 },
+    { type:'text', x:55, y:925, content:'{{initial}}', color:'#0A0D14', fontSize:18, fontWeight:900, textAlign:'center', maxWidth:36, zIndex:3 },
+    { type:'text', x:105, y:912, content:'{{name}}', color:'#4DFFA0', fontSize:16, fontWeight:700, zIndex:2 },
+    { type:'text', x:105, y:938, content:'{{message}}', color:'rgba(255,255,255,0.9)', fontSize:16, fontWeight:400, maxWidth:400, zIndex:2 }
+  ],
+  animation: { type:'slide', direction:'left', duration:0.4 },
+  duration: 6,
+  loopCount: 1
+}, {});
