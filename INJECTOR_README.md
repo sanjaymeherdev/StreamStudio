@@ -25,9 +25,20 @@ The Overlay Admin JS Injector allows you to:
 
 ## Database Schema Required
 
-Add this table to your Supabase database:
+Run the complete SQL script from `/workspace/sql/overlay_injects_setup.sql` in your Supabase SQL Editor.
 
+This creates:
+- `overlay_injects` table with all required columns
+- Indexes for performance
+- Realtime publication
+- Helper functions (auto-expiry, pending queue)
+- Row Level Security policies
+- Default expiry trigger
+- Monitoring view
+
+**Quick Setup:**
 ```sql
+-- Minimum required:
 CREATE TABLE IF NOT EXISTS overlay_injects (
     id BIGSERIAL PRIMARY KEY,
     js_code TEXT NOT NULL,
@@ -38,12 +49,7 @@ CREATE TABLE IF NOT EXISTS overlay_injects (
     processed_at TIMESTAMPTZ
 );
 
--- Enable Realtime
 ALTER PUBLICATION supabase_realtime ADD TABLE overlay_injects;
-
--- Optional: Index for device-specific queries
-CREATE INDEX idx_overlay_injects_device ON overlay_injects(device_slug);
-CREATE INDEX idx_overlay_injects_status ON overlay_injects(status);
 ```
 
 ## API Endpoints
