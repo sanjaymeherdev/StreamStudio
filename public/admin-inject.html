@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay Admin - JS Injector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4DFFA0;
+            font-size: 2rem;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .panel h2 {
+            color: #4DFFA0;
+            margin-bottom: 16px;
+            font-size: 1.3rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-weight: 500;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #4DFFA0;
+        }
+
+        textarea {
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+            resize: vertical;
+        }
+
+        .placeholder-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .placeholder-input {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .placeholder-input label {
+            color: #4DFFA0;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        .placeholder-input input {
+            margin-bottom: 0;
+        }
+
+        .placeholder-input .error {
+            color: #ff6b6b;
+            font-size: 12px;
+            margin-top: 6px;
+            display: none;
+        }
+
+        .placeholder-input.invalid input {
+            border-color: #ff6b6b;
+        }
+
+        .placeholder-input.invalid .error {
+            display: block;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #4DFFA0;
+            color: #0A0D14;
+        }
+
+        .btn-primary:hover {
+            background: #3ddb8a;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .template-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 12px;
+        }
+
+        .template-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .template-item:hover {
+            border-color: rgba(77, 255, 160, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .template-item.selected {
+            border-color: #4DFFA0;
+            background: rgba(77, 255, 160, 0.1);
+        }
+
+        .template-item h3 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .template-item p {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 16px;
+            display: none;
+        }
+
+        .status-message.success {
+            background: rgba(77, 255, 160, 0.2);
+            border: 1px solid #4DFFA0;
+            color: #4DFFA0;
+            display: block;
+        }
+
+        .status-message.error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            display: block;
+        }
+
+        .mode-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .mode-tab {
+            padding: 10px 20px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .mode-tab.active {
+            background: #4DFFA0;
+            color: #0A0D14;
+            border-color: #4DFFA0;
+        }
+
+        .mode-content {
+            display: none;
+        }
+
+        .mode-content.active {
+            display: block;
+        }
+
+        .info-box {
+            background: rgba(77, 255, 160, 0.1);
+            border-left: 4px solid #4DFFA0;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            border-radius: 0 8px 8px 0;
+            font-size: 13px;
+        }
+
+        .char-info {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Overlay JS Injector</h1>
+
+        <!-- Template Selection -->
+        <div class="panel">
+            <h2>1. Select Template</h2>
+            <div class="info-box">
+                Choose an existing template or create your own custom JS. Templates with <code>{{placeholders}}</code> will show input fields for you to fill in.
+            </div>
+            
+            <div class="mode-tabs">
+                <div class="mode-tab active" data-mode="existing">Existing Templates</div>
+                <div class="mode-tab" data-mode="custom">Custom JS</div>
+            </div>
+
+            <div class="mode-content active" id="existing-mode">
+                <div class="template-list" id="templateList">
+                    <!-- Templates loaded dynamically -->
+                </div>
+            </div>
+
+            <div class="mode-content" id="custom-mode">
+                <label for="customName">Template Name</label>
+                <input type="text" id="customName" placeholder="My Custom Overlay">
+
+                <label for="customJs">JavaScript Code</label>
+                <textarea id="customJs" placeholder="renderTemplate({
+  name: &quot;my-overlay&quot;,
+  elements: [
+    { type:'text', x:100, y:100, content:'Hello World', color:'#fff', fontSize:24 }
+  ],
+  animation: { type:'fade', duration:0.5 },
+  duration: 5,
+  loopCount: 1
+}, {});"></textarea>
+            </div>
+        </div>
+
+        <!-- Placeholder Inputs -->
+        <div class="panel" id="placeholderPanel" style="display: none;">
+            <h2>2. Fill Placeholders</h2>
+            <div class="info-box">
+                Enter values for each placeholder. Only safe characters are allowed: letters, numbers, space, and . , @ _ - ₹ $ # & ! ? : / +
+            </div>
+            <div class="placeholder-form" id="placeholderForm">
+                <!-- Placeholder inputs generated dynamically -->
+            </div>
+        </div>
+
+        <!-- Preview & Send -->
+        <div class="panel">
+            <h2>3. Preview & Send</h2>
+            <label for="previewJs">Generated JavaScript (Read-only)</label>
+            <textarea id="previewJs" readonly></textarea>
+
+            <label for="targetTable">Target Supabase Table</label>
+            <select id="targetTable">
+                <option value="overlay_injects">overlay_injects (Realtime)</option>
+            </select>
+
+            <label for="deviceSlug">Device/Overlay Slug (optional)</label>
+            <input type="text" id="deviceSlug" placeholder="main-overlay">
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="validateBtn">Validate</button>
+                <button class="btn btn-primary" id="sendBtn" disabled>Send to Overlay</button>
+            </div>
+
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        // Safe character whitelist regex
+        const SAFE_PATTERN = /^[a-zA-Z0-9\s.,@_\-₹$#&!?:+\/]*$/;
+        const SAFE_CHARS_INFO = 'a-z, A-Z, 0-9, space, . , @ _ - ₹ $ # & ! ? : / +';
+
+        // State
+        let templates = [];
+        let selectedTemplate = null;
+        let currentPlaceholders = [];
+        let mode = 'existing'; // 'existing' or 'custom'
+
+        // DOM Elements
+        const templateListEl = document.getElementById('templateList');
+        const placeholderPanel = document.getElementById('placeholderPanel');
+        const placeholderForm = document.getElementById('placeholderForm');
+        const previewJs = document.getElementById('previewJs');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const modeTabs = document.querySelectorAll('.mode-tab');
+        const existingMode = document.getElementById('existing-mode');
+        const customMode = document.getElementById('custom-mode');
+        const customName = document.getElementById('customName');
+        const customJs = document.getElementById('customJs');
+
+        // Initialize
+        async function init() {
+            await loadTemplates();
+            setupEventListeners();
+        }
+
+        // Load templates from server
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/js-templates');
+                templates = await response.json();
+                renderTemplateList();
+            } catch (error) {
+                console.error('Failed to load templates:', error);
+                showStatus('Failed to load templates', 'error');
+            }
+        }
+
+        // Render template list
+        function renderTemplateList() {
+            templateListEl.innerHTML = templates.map(t => `
+                <div class="template-item" data-id="${t.id}">
+                    <h3>${escapeHtml(t.name)}</h3>
+                    <p>${t.placeholders ? t.placeholders.length : 0} placeholders</p>
+                </div>
+            `).join('');
+        }
+
+        // Extract placeholders from JS code
+        function findPlaceholders(jsCode) {
+            const matches = jsCode.match(/\{\{([^}]+)\}\}/g);
+            if (!matches) return [];
+            
+            const placeholders = [...new Set(matches.map(m => {
+                return m.slice(2, -2).trim();
+            }))];
+            
+            return placeholders;
+        }
+
+        // Validate value against safe pattern
+        function validateValue(value) {
+            return SAFE_PATTERN.test(value);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Mode tabs
+            modeTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    modeTabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    mode = tab.dataset.mode;
+                    existingMode.classList.toggle('active', mode === 'existing');
+                    customMode.classList.toggle('active', mode === 'custom');
+                    
+                    if (mode === 'custom') {
+                        selectedTemplate = null;
+                        placeholderPanel.style.display = 'none';
+                        updatePreview();
+                    } else {
+                        customJs.value = '';
+                        customName.value = '';
+                    }
+                });
+            });
+
+            // Template selection
+            templateListEl.addEventListener('click', (e) => {
+                const item = e.target.closest('.template-item');
+                if (!item) return;
+
+                document.querySelectorAll('.template-item').forEach(i => i.classList.remove('selected'));
+                item.classList.add('selected');
+
+                const template = templates.find(t => t.id == item.dataset.id);
+                if (template) {
+                    selectedTemplate = template;
+                    loadTemplatePlaceholders(template);
+                }
+            });
+
+            // Custom JS change
+            customJs.addEventListener('input', () => {
+                updatePreview();
+            });
+
+            customName.addEventListener('input', () => {
+                updatePreview();
+            });
+
+            // Validate button
+            document.getElementById('validateBtn').addEventListener('click', validateAll);
+
+            // Send button
+            sendBtn.addEventListener('click', sendToOverlay);
+        }
+
+        // Load template and extract placeholders
+        function loadTemplatePlaceholders(template) {
+            const jsCode = template.js_code || template.content || '';
+            const placeholders = findPlaceholders(jsCode);
+            currentPlaceholders = placeholders;
+
+            if (placeholders.length > 0) {
+                placeholderPanel.style.display = 'block';
+                renderPlaceholderForm(placeholders, jsCode);
+            } else {
+                placeholderPanel.style.display = 'none';
+                currentPlaceholders = [];
+                previewJs.value = jsCode;
+                sendBtn.disabled = false;
+            }
+        }
+
+        // Render placeholder form
+        function renderPlaceholderForm(placeholders, jsCode) {
+            placeholderForm.innerHTML = placeholders.map(ph => `
+                <div class="placeholder-input" data-placeholder="${escapeHtml(ph)}">
+                    <label>{{${escapeHtml(ph)}}}</label>
+                    <input type="text" 
+                           data-placeholder="${escapeHtml(ph)}" 
+                           placeholder="Enter value for ${escapeHtml(ph)}"
+                           oninput="onPlaceholderInput(this)">
+                    <div class="error">Invalid characters detected. Allowed: ${SAFE_CHARS_INFO}</div>
+                    <div class="char-info">Allowed: ${SAFE_CHARS_INFO}</div>
+                </div>
+            `).join('');
+
+            // Store jsCode for preview generation
+            placeholderForm.dataset.jsCode = jsCode;
+            updatePreview();
+        }
+
+        // Handle placeholder input
+        window.onPlaceholderInput = function(input) {
+            const value = input.value;
+            const wrapper = input.closest('.placeholder-input');
+            
+            if (!validateValue(value)) {
+                wrapper.classList.add('invalid');
+            } else {
+                wrapper.classList.remove('invalid');
+            }
+
+            updatePreview();
+        };
+
+        // Update preview
+        function updatePreview() {
+            let finalJs = '';
+
+            if (mode === 'custom') {
+                finalJs = customJs.value;
+            } else if (selectedTemplate) {
+                let jsCode = selectedTemplate.js_code || selectedTemplate.content || '';
+                
+                // Replace placeholders with JSON.stringify'd values
+                currentPlaceholders.forEach(ph => {
+                    const input = placeholderForm.querySelector(`input[data-placeholder="${CSS.escape(ph)}"]`);
+                    const value = input ? input.value : '';
+                    
+                    // Use JSON.stringify to safely escape the value
+                    const escapedValue = JSON.stringify(value);
+                    
+                    // Replace {{placeholder}} with the escaped value
+                    const regex = new RegExp(`\\{\\{${ph.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}}\\}\\}`, 'g');
+                    jsCode = jsCode.replace(regex, escapedValue);
+                });
+                
+                finalJs = jsCode;
+            }
+
+            previewJs.value = finalJs;
+
+            // Enable send button only if all placeholders are filled and valid
+            validateAll();
+        }
+
+        // Validate all placeholders
+        function validateAll() {
+            if (mode === 'custom') {
+                const hasContent = customJs.value.trim().length > 0;
+                const hasName = customName.value.trim().length > 0;
+                sendBtn.disabled = !(hasContent && hasName);
+                return hasContent && hasName;
+            }
+
+            if (!selectedTemplate) {
+                sendBtn.disabled = true;
+                return false;
+            }
+
+            let allValid = true;
+            let allFilled = true;
+
+            currentPlaceholders.forEach(ph => {
+                const input = placeholderForm.querySelector(`input[data-placeholder="${CSS.escape(ph)}"]`);
+                if (input) {
+                    const value = input.value;
+                    if (!value) {
+                        allFilled = false;
+                    }
+                    if (!validateValue(value)) {
+                        allValid = false;
+                    }
+                }
+            });
+
+            sendBtn.disabled = !(allValid && allFilled);
+            return allValid && allFilled;
+        }
+
+        // Send to overlay
+        async function sendToOverlay() {
+            const isValid = mode === 'custom' ? validateAll() : validateAll();
+            if (!isValid) {
+                showStatus('Please fill all placeholders with valid values', 'error');
+                return;
+            }
+
+            const payload = {
+                js_code: previewJs.value,
+                table_name: document.getElementById('targetTable').value,
+                device_slug: document.getElementById('deviceSlug').value || null,
+                template_name: mode === 'custom' ? customName.value : selectedTemplate?.name,
+                created_at: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch('/api/overlay-inject', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showStatus('✅ Successfully sent to overlay!', 'success');
+                } else {
+                    showStatus('❌ Error: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Failed to send: ' + error.message, 'error');
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message ' + type;
+            
+            setTimeout(() => {
+                statusMessage.className = 'status-message';
+            }, 5000);
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>
