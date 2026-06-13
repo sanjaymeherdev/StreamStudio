@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - StreamStudio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        header h1 {
+            font-size: 28px;
+        }
+        
+        .back-link {
+            color: #e94560;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #0f3460;
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-card .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #e94560;
+        }
+        
+        .stat-card .subtext {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        .section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #0f3460;
+        }
+        
+        .section h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #e94560;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        th {
+            background: #0f3460;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        tr:hover {
+            background: #1a2744;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-completed {
+            background: #00b894;
+            color: #000;
+        }
+        
+        .status-failed {
+            background: #dc3545;
+            color: #fff;
+        }
+        
+        .status-pending {
+            background: #fdcb6e;
+            color: #000;
+        }
+        
+        .chart-placeholder {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+            background: #0f3460;
+            color: #eee;
+        }
+        
+        .btn:hover {
+            background: #16213e;
+        }
+        
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #ff6b6b;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .refresh-indicator {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .realtime-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00b894;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        
+        code {
+            background: #0f3460;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Analytics Dashboard</h1>
+            <div>
+                <span class="realtime-dot"></span>
+                <span id="realtimeStatus">Realtime Active</span>
+                <span class="refresh-indicator" id="lastRefresh"></span>
+                <a href="/index.html" class="back-link" style="margin-left: 20px;">← Back to Admin</a>
+            </div>
+        </header>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Templates</h3>
+                <div class="value" id="totalTemplates">-</div>
+                <div class="subtext">Created overlays</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Active Schedules</h3>
+                <div class="value" id="activeSchedules">-</div>
+                <div class="subtext">Currently scheduled</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Triggers Today</h3>
+                <div class="value" id="triggersToday">-</div>
+                <div class="subtext">Last 24 hours</div>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Success Rate</h3>
+                <div class="value" id="successRate">-</div>
+                <div class="subtext">Last 50 triggers</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📈 Recent Schedule Logs</h2>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="loadLogs()">🔄 Refresh Logs</button>
+                <button class="btn" onclick="exportLogs()">📥 Export CSV</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Template</th>
+                            <th>Device</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <h3>Loading logs...</h3>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📅 All Templates</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Created</th>
+                            <th>Last Updated</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="templatesTableBody">
+                        <tr>
+                            <td colspan="4" class="empty-state">
+                                <h3>Loading templates...</h3>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>⏰ Upcoming Schedules</h2>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Scheduled Time</th>
+                            <th>Template</th>
+                            <th>Device</th>
+                            <th>Duration</th>
+                            <th>Repeat</th>
+                        </tr>
+                    </thead>
+                    <tbody id="upcomingTableBody">
+                        <tr>
+                            <td colspan="5" class="empty-state">
+                                <h3>Loading schedules...</h3>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase config
+        const SUPABASE_URL = 'https://yfjzvpzgecbnfysacbjq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlmanp2cHpnZWNibmZ5c2FjYmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5OTY2MzcsImV4cCI6MjA4MzU3MjYzN30.v27rjgUTGuHAq6sAjhjQYWb-Y9O23f5FpwXQBFZyjmQ';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let logs = [];
+        let templates = [];
+        let schedules = [];
+        
+        // Load all data
+        async function loadAllData() {
+            await Promise.all([
+                loadTemplates(),
+                loadSchedules(),
+                loadLogs()
+            ]);
+            updateStats();
+            updateLastRefresh();
+        }
+        
+        // Load templates
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                templates = await response.json();
+                renderTemplatesTable();
+            } catch (error) {
+                console.error('Error loading templates:', error);
+            }
+        }
+        
+        // Load schedules
+        async function loadSchedules() {
+            try {
+                const response = await fetch('/api/schedules');
+                schedules = await response.json();
+                renderUpcomingSchedules();
+            } catch (error) {
+                console.error('Error loading schedules:', error);
+            }
+        }
+        
+        // Load logs
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/schedule-logs?limit=50');
+                logs = await response.json();
+                renderLogsTable();
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                document.getElementById('logsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <h3>Error loading logs</h3>
+                            <p>${error.message}</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Render templates table
+        function renderTemplatesTable() {
+            const tbody = document.getElementById('templatesTableBody');
+            
+            if (templates.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            <h3>No templates yet</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = templates.map(t => {
+                const statusClass = t.is_active ? 'status-completed' : 'status-failed';
+                const statusText = t.is_active ? 'Active' : 'Inactive';
+                
+                return `
+                    <tr>
+                        <td><strong>${t.name}</strong></td>
+                        <td>${new Date(t.created_at).toLocaleDateString()}</td>
+                        <td>${new Date(t.updated_at).toLocaleDateString()}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Render upcoming schedules
+        function renderUpcomingSchedules() {
+            const tbody = document.getElementById('upcomingTableBody');
+            const now = new Date();
+            
+            const upcoming = schedules
+                .filter(s => new Date(s.start_datetime) > now && s.is_active)
+                .sort((a, b) => new Date(a.start_datetime) - new Date(b.start_datetime))
+                .slice(0, 10);
+            
+            if (upcoming.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state">
+                            <h3>No upcoming schedules</h3>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = upcoming.map(s => {
+                const template = templates.find(t => t.id === s.template_id);
+                const templateName = template ? template.name : 'Unknown';
+                
+                return `
+                    <tr>
+                        <td>${new Date(s.start_datetime).toLocaleString()}</td>
+                        <td>${templateName}</td>
+                        <td>${s.device_id || 'phone1'}</td>
+                        <td>${s.duration_seconds}s</td>
+                        <td>${s.repeat_interval_seconds > 0 ? `Every ${s.repeat_interval_seconds}s` : 'Once'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Render logs table
+        function renderLogsTable() {
+            const tbody = document.getElementById('logsTableBody');
+            
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <h3>No logs yet</h3>
+                            <p>Schedule triggers will appear here</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = logs.map(log => {
+                const template = log.templates || templates.find(t => t.id === log.template_id);
+                const templateName = template ? (template.name || 'Unknown') : 'Unknown';
+                
+                let statusClass = 'status-pending';
+                let statusText = log.status || 'pending';
+                
+                if (log.status === 'completed') {
+                    statusClass = 'status-completed';
+                } else if (log.status === 'failed') {
+                    statusClass = 'status-failed';
+                }
+                
+                return `
+                    <tr>
+                        <td>${new Date(log.triggered_at).toLocaleString()}</td>
+                        <td>${templateName}</td>
+                        <td>${log.device_id || 'phone1'}</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>-</td>
+                        <td><code>${log.error_message || '-'}</code></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Update stats
+        function updateStats() {
+            document.getElementById('totalTemplates').textContent = templates.length;
+            
+            const now = new Date();
+            const activeCount = schedules.filter(s => s.is_active && new Date(s.start_datetime) > now).length;
+            document.getElementById('activeSchedules').textContent = activeCount;
+            
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayLogs = logs.filter(l => new Date(l.triggered_at) >= todayStart);
+            document.getElementById('triggersToday').textContent = todayLogs.length;
+            
+            const recentLogs = logs.slice(0, 50);
+            const successCount = recentLogs.filter(l => l.status === 'completed').length;
+            const rate = recentLogs.length > 0 ? Math.round((successCount / recentLogs.length) * 100) : 100;
+            document.getElementById('successRate').textContent = rate + '%';
+        }
+        
+        // Export logs as CSV
+        function exportLogs() {
+            if (logs.length === 0) {
+                alert('No logs to export');
+                return;
+            }
+            
+            const headers = ['Triggered At', 'Template ID', 'Device ID', 'Status', 'Error Message'];
+            const rows = logs.map(log => [
+                new Date(log.triggered_at).toISOString(),
+                log.template_id,
+                log.device_id || 'phone1',
+                log.status || 'pending',
+                log.error_message || ''
+            ]);
+            
+            const csv = [
+                headers.join(','),
+                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `schedule-logs-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Realtime subscription for logs
+        function setupRealtime() {
+            const channel = supabase
+                .channel('schedule-logs-changes')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'schedule_logs' },
+                    (payload) => {
+                        console.log('Log change detected:', payload);
+                        loadLogs();
+                        updateStats();
+                    }
+                )
+                .subscribe();
+            
+            console.log('Realtime subscription active for analytics');
+        }
+        
+        function updateLastRefresh() {
+            const now = new Date();
+            document.getElementById('lastRefresh').textContent = `Last: ${now.toLocaleTimeString()}`;
+        }
+        
+        // Initialize
+        loadAllData();
+        setupRealtime();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadAllData, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule Manager - StreamStudio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        header h1 {
+            font-size: 28px;
+        }
+        
+        .back-link {
+            color: #e94560;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary {
+            background: #e94560;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #ff6b6b;
+        }
+        
+        .btn-secondary {
+            background: #0f3460;
+            color: #eee;
+        }
+        
+        .btn-secondary:hover {
+            background: #16213e;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .table-container {
+            background: #16213e;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #0f3460;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #0f3460;
+        }
+        
+        th {
+            background: #0f3460;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        tr:hover {
+            background: #1a2744;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-active {
+            background: #00b894;
+            color: #000;
+        }
+        
+        .status-inactive {
+            background: #636e72;
+            color: #fff;
+        }
+        
+        .status-pending {
+            background: #fdcb6e;
+            color: #000;
+        }
+        
+        .status-triggered {
+            background: #0984e3;
+            color: #fff;
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #0f3460;
+        }
+        
+        .modal h2 {
+            margin-bottom: 20px;
+            color: #e94560;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #0f3460;
+            border-radius: 6px;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #e94560;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #888;
+        }
+        
+        .refresh-indicator {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .realtime-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00b894;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 Schedule Manager</h1>
+            <div>
+                <span class="realtime-dot"></span>
+                <span id="realtimeStatus">Realtime Active</span>
+                <span class="refresh-indicator" id="lastRefresh"></span>
+                <a href="/index.html" class="back-link" style="margin-left: 20px;">← Back to Admin</a>
+            </div>
+        </header>
+        
+        <div class="controls">
+            <button class="btn btn-primary" onclick="openModal()">+ New Schedule</button>
+            <button class="btn btn-secondary" onclick="loadSchedules()">🔄 Refresh</button>
+            <button class="btn btn-secondary" onclick="triggerNow()">⚡ Trigger Test</button>
+        </div>
+        
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Template</th>
+                        <th>Device</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Repeat</th>
+                        <th>Duration</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleTableBody">
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <h3>Loading schedules...</h3>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Modal for Create/Edit -->
+    <div class="modal-overlay" id="scheduleModal">
+        <div class="modal">
+            <h2 id="modalTitle">New Schedule</h2>
+            <form id="scheduleForm">
+                <input type="hidden" id="scheduleId">
+                
+                <div class="form-group">
+                    <label>Template</label>
+                    <select id="templateSelect" required>
+                        <option value="">Select a template...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Device ID</label>
+                    <input type="text" id="deviceId" value="phone1" placeholder="e.g., phone1">
+                </div>
+                
+                <div class="form-group">
+                    <label>Start DateTime</label>
+                    <input type="datetime-local" id="startDatetime" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>End DateTime (optional)</label>
+                    <input type="datetime-local" id="endDatetime">
+                </div>
+                
+                <div class="form-group">
+                    <label>Duration (seconds)</label>
+                    <input type="number" id="durationSeconds" value="10" min="1" max="300">
+                </div>
+                
+                <div class="form-group">
+                    <label>Repeat Interval (seconds, 0 = no repeat)</label>
+                    <input type="number" id="repeatInterval" value="0" min="0">
+                </div>
+                
+                <div class="form-group">
+                    <label>Repeat Quantity</label>
+                    <input type="number" id="repeatQty" value="1" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label>Loop Count</label>
+                    <input type="number" id="loopCount" value="1" min="1">
+                </div>
+                
+                <div class="form-group">
+                    <label>Active</label>
+                    <select id="isActive">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase config
+        const SUPABASE_URL = 'https://yfjzvpzgecbnfysacbjq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlmanp2cHpnZWNibmZ5c2FjYmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5OTY2MzcsImV4cCI6MjA4MzU3MjYzN30.v27rjgUTGuHAq6sAjhjQYWb-Y9O23f5FpwXQBFZyjmQ';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let schedules = [];
+        let templates = [];
+        
+        // Load templates on init
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/templates');
+                templates = await response.json();
+                
+                const select = document.getElementById('templateSelect');
+                select.innerHTML = '<option value="">Select a template...</option>';
+                templates.forEach(t => {
+                    const option = document.createElement('option');
+                    option.value = t.id;
+                    option.textContent = t.name;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading templates:', error);
+            }
+        }
+        
+        // Load schedules
+        async function loadSchedules() {
+            try {
+                const response = await fetch('/api/schedules');
+                schedules = await response.json();
+                renderTable();
+                updateLastRefresh();
+            } catch (error) {
+                console.error('Error loading schedules:', error);
+                document.getElementById('scheduleTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <h3>Error loading schedules</h3>
+                            <p>${error.message}</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Render table
+        function renderTable() {
+            const tbody = document.getElementById('scheduleTableBody');
+            
+            if (schedules.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            <h3>No schedules yet</h3>
+                            <p>Click "+ New Schedule" to create your first scheduled overlay</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = schedules.map(s => {
+                const template = templates.find(t => t.id === s.template_id);
+                const templateName = template ? template.name : 'Unknown';
+                const statusClass = s.is_active ? 'status-active' : 'status-inactive';
+                const statusText = s.is_active ? 'Active' : 'Inactive';
+                
+                return `
+                    <tr>
+                        <td><code>${s.id}</code></td>
+                        <td>${templateName}</td>
+                        <td>${s.device_id || 'phone1'}</td>
+                        <td>${new Date(s.start_datetime).toLocaleString()}</td>
+                        <td>${s.end_datetime ? new Date(s.end_datetime).toLocaleString() : '-'}</td>
+                        <td>${s.repeat_interval_seconds > 0 ? `Every ${s.repeat_interval_seconds}s × ${s.repeat_qty}` : 'Once'}</td>
+                        <td>${s.duration_seconds}s</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        <td>
+                            <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 12px;" onclick="editSchedule('${s.id}')">Edit</button>
+                            <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" onclick="deleteSchedule('${s.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // Modal functions
+        function openModal() {
+            document.getElementById('modalTitle').textContent = 'New Schedule';
+            document.getElementById('scheduleForm').reset();
+            document.getElementById('scheduleId').value = '';
+            document.getElementById('deviceId').value = 'phone1';
+            document.getElementById('isActive').value = 'true';
+            document.getElementById('scheduleModal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('scheduleModal').style.display = 'none';
+        }
+        
+        function editSchedule(id) {
+            const schedule = schedules.find(s => s.id === id);
+            if (!schedule) return;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Schedule';
+            document.getElementById('scheduleId').value = schedule.id;
+            document.getElementById('templateSelect').value = schedule.template_id;
+            document.getElementById('deviceId').value = schedule.device_id || 'phone1';
+            document.getElementById('startDatetime').value = new Date(schedule.start_datetime).toISOString().slice(0, 16);
+            document.getElementById('endDatetime').value = schedule.end_datetime ? new Date(schedule.end_datetime).toISOString().slice(0, 16) : '';
+            document.getElementById('durationSeconds').value = schedule.duration_seconds || 10;
+            document.getElementById('repeatInterval').value = schedule.repeat_interval_seconds || 0;
+            document.getElementById('repeatQty').value = schedule.repeat_qty || 1;
+            document.getElementById('loopCount').value = schedule.loop_count || 1;
+            document.getElementById('isActive').value = schedule.is_active.toString();
+            
+            document.getElementById('scheduleModal').style.display = 'flex';
+        }
+        
+        // Form submit
+        document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('scheduleId').value;
+            const data = {
+                template_id: document.getElementById('templateSelect').value,
+                device_id: document.getElementById('deviceId').value,
+                start_datetime: new Date(document.getElementById('startDatetime').value).toISOString(),
+                end_datetime: document.getElementById('endDatetime').value ? new Date(document.getElementById('endDatetime').value).toISOString() : null,
+                duration_seconds: parseInt(document.getElementById('durationSeconds').value),
+                repeat_interval_seconds: parseInt(document.getElementById('repeatInterval').value),
+                repeat_qty: parseInt(document.getElementById('repeatQty').value),
+                loop_count: parseInt(document.getElementById('loopCount').value),
+                is_active: document.getElementById('isActive').value === 'true'
+            };
+            
+            try {
+                if (id) {
+                    // Update
+                    const response = await fetch(`/api/schedule/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) throw new Error('Update failed');
+                } else {
+                    // Create
+                    const response = await fetch('/api/schedules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (!response.ok) throw new Error('Create failed');
+                }
+                
+                closeModal();
+                loadSchedules();
+            } catch (error) {
+                alert('Error saving schedule: ' + error.message);
+            }
+        });
+        
+        // Delete schedule
+        async function deleteSchedule(id) {
+            if (!confirm('Are you sure you want to delete this schedule?')) return;
+            
+            try {
+                const response = await fetch(`/api/schedule/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) throw new Error('Delete failed');
+                loadSchedules();
+            } catch (error) {
+                alert('Error deleting schedule: ' + error.message);
+            }
+        }
+        
+        // Trigger now (test)
+        async function triggerNow() {
+            const templateId = prompt('Enter template ID to trigger now:');
+            if (!templateId) return;
+            
+            try {
+                const response = await fetch('/api/trigger-now', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        template_id: templateId,
+                        device_id: 'phone1',
+                        duration_seconds: 10
+                    })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert(`Triggered! Template "${result.template}" will show for 10 seconds`);
+                } else {
+                    alert('Error: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error triggering: ' + error.message);
+            }
+        }
+        
+        // Realtime subscription
+        function setupRealtime() {
+            const channel = supabase
+                .channel('schedules-changes')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'schedules' },
+                    (payload) => {
+                        console.log('Schedule change detected:', payload);
+                        loadSchedules();
+                    }
+                )
+                .subscribe();
+            
+            console.log('Realtime subscription active for schedules');
+        }
+        
+        function updateLastRefresh() {
+            const now = new Date();
+            document.getElementById('lastRefresh').textContent = `Last: ${now.toLocaleTimeString()}`;
+        }
+        
+        // Close modal on outside click
+        document.getElementById('scheduleModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('scheduleModal')) {
+                closeModal();
+            }
+        });
+        
+        // Initialize
+        loadTemplates();
+        loadSchedules();
+        setupRealtime();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadSchedules, 30000);
+    </script>
+</body>
+</html>
