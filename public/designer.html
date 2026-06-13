@@ -925,67 +925,70 @@ function renderCanvas() {
 }
 
 function makeDOM(el) {
-  const div = document.createElement('div');
-  div.className = 'draggable-element';
-  div.dataset.id = el.id;
-  div.style.cssText = `position:absolute;transform:translate(${el.x}px,${el.y}px) rotate(${el.rotation||0}deg);z-index:${el.zIndex};opacity:${(el.opacity||100)/100};`;
-  
+  const outer = document.createElement('div');
+  outer.className = 'draggable-element';
+  outer.dataset.id = el.id;
+  outer.style.cssText = `position:absolute;transform:translate(${el.x}px,${el.y}px) rotate(${el.rotation||0}deg);z-index:${el.zIndex};opacity:${(el.opacity||100)/100};`;
+
+  const inner = document.createElement('div');
   const anim = buildAnimCSS(el);
-  if (anim) div.style.animation = anim;
-  
+  if (anim) inner.style.animation = anim;
+
   if (el.type === 'shape') {
     if (el.shapeType === 'rectangle') {
-      div.style.width = el.width + 'px';
-      div.style.height = el.height + 'px';
-      div.style.background = el.color;
-      div.style.borderRadius = el.borderRadius + 'px';
+      inner.style.width = el.width + 'px';
+      inner.style.height = el.height + 'px';
+      inner.style.background = el.color;
+      inner.style.borderRadius = el.borderRadius + 'px';
     } else if (el.shapeType === 'circle') {
-      div.style.width = el.size + 'px';
-      div.style.height = el.size + 'px';
-      div.style.background = el.color;
-      div.style.borderRadius = '50%';
+      inner.style.width = el.size + 'px';
+      inner.style.height = el.size + 'px';
+      inner.style.background = el.color;
+      inner.style.borderRadius = '50%';
     } else if (el.shapeType === 'line') {
-      div.style.width = el.width + 'px';
-      div.style.height = el.thickness + 'px';
-      div.style.background = el.color;
-      div.style.borderRadius = (el.thickness / 2) + 'px';
+      inner.style.width = el.width + 'px';
+      inner.style.height = el.thickness + 'px';
+      inner.style.background = el.color;
+      inner.style.borderRadius = (el.thickness / 2) + 'px';
     }
   } else if (el.type === 'image') {
     const img = document.createElement('img');
     img.src = el.src;
     img.crossOrigin = 'anonymous';
     img.style.cssText = `width:${el.width}px;height:auto;border-radius:${el.borderRadius||0}px;display:block;`;
-    div.appendChild(img);
+    inner.appendChild(img);
   } else if (el.type === 'text') {
-    div.textContent = el.content;
+    inner.textContent = el.content;
     const shadows = { soft: '2px 2px 8px rgba(0,0,0,0.4)', hard: '2px 2px 0 rgba(0,0,0,0.9)', glow: `0 0 20px ${el.color}` };
-    div.style.color = el.color;
-    div.style.fontSize = el.fontSize + 'px';
-    div.style.fontWeight = el.fontWeight;
-    div.style.fontFamily = el.fontFamily;
-    div.style.textAlign = el.textAlign;
-    div.style.maxWidth = el.maxWidth + 'px';
-    div.style.background = el.bgColor;
-    div.style.padding = el.padding + 'px';
-    div.style.borderRadius = el.borderRadius + 'px';
-    div.style.whiteSpace = 'pre-wrap';
-    div.style.textShadow = shadows[el.textShadow] || 'none';
+    inner.style.color = el.color;
+    inner.style.fontSize = el.fontSize + 'px';
+    inner.style.fontWeight = el.fontWeight;
+    inner.style.fontFamily = el.fontFamily;
+    inner.style.textAlign = el.textAlign;
+    inner.style.maxWidth = el.maxWidth + 'px';
+    inner.style.background = el.bgColor;
+    inner.style.padding = el.padding + 'px';
+    inner.style.borderRadius = el.borderRadius + 'px';
+    inner.style.whiteSpace = 'pre-wrap';
+    inner.style.textShadow = shadows[el.textShadow] || 'none';
   } else if (el.type === 'social') {
     const icons = { youtube: '▶', twitch: '◉', tiktok: '♪', instagram: '◎', twitter: '𝕏', facebook: 'f' };
-    div.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
+    inner.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
       <span style="font-size:${el.iconSize}px">${icons[el.platform] || '◈'}</span>
       <span style="color:${el.textColor};font-size:${el.fontSize}px;font-weight:bold">@${el.username}</span>
       ${el.showLiveBadge ? '<span style="color:#ff4444;font-size:13px;background:rgba(255,68,68,0.2);padding:2px 8px;border-radius:20px">LIVE</span>' : ''}
     </div>`;
-    div.style.background = el.bgColor;
-    div.style.padding = el.padding;
-    div.style.borderRadius = el.borderRadius + 'px';
-    div.style.display = 'inline-block';
+    inner.style.background = el.bgColor;
+    inner.style.padding = el.padding;
+    inner.style.borderRadius = el.borderRadius + 'px';
+    inner.style.display = 'inline-block';
   }
-  
-  div.addEventListener('mousedown', e => { e.stopPropagation(); selectEl(el.id); startDrag(e, el.id); });
-  div.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); selectEl(el.id); startDragTouch(e, el.id); }, { passive: false });
-  return div;
+
+  outer.appendChild(inner);
+
+  outer.addEventListener('mousedown', e => { e.stopPropagation(); selectEl(el.id); startDrag(e, el.id); });
+  outer.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); selectEl(el.id); startDragTouch(e, el.id); }, { passive: false });
+  return outer;
 }
 
 function renderLists() {

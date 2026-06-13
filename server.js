@@ -271,303 +271,162 @@ app.get('/o/:slug', async (req, res) => {
 
 // Render overlay HTML from design JSON
 function renderOverlayHTML(design) {
-    const { width = 1080, height = 1920, elements = [], background = 'transparent' } = design;
-    
+    const { width = 1920, height = 1080, elements = [], background = 'transparent' } = design;
+
     let css = `
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            width: 100vw;
-            height: 100vh;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            width: 100vw; height: 100vh;
             background: ${background};
             overflow: hidden;
             position: relative;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
         .overlay-container {
             position: relative;
-            width: 100%;
-            height: 100%;
+            width: ${width}px;
+            height: ${height}px;
+            transform-origin: top left;
         }
-        
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .ov-el { position: absolute; }
+
+        @keyframes ov-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes ov-fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes ov-slideUp { from { transform: translate(var(--tx),calc(var(--ty) + 80px)) rotate(var(--rot)); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity: 1; } }
+        @keyframes ov-slideDown { from { transform: translate(var(--tx),calc(var(--ty) - 80px)) rotate(var(--rot)); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity: 1; } }
+        @keyframes ov-slideLeft { from { transform: translate(calc(var(--tx) + 120px),var(--ty)) rotate(var(--rot)); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity: 1; } }
+        @keyframes ov-slideRight { from { transform: translate(calc(var(--tx) - 120px),var(--ty)) rotate(var(--rot)); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity: 1; } }
+        @keyframes ov-zoomIn { from { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(0.3); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1); opacity: 1; } }
+        @keyframes ov-zoomOut { from { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1.8); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1); opacity: 1; } }
+        @keyframes ov-bounceIn {
+            0% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(0.4); opacity: 0; }
+            60% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1.1); }
+            80% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(0.95); }
+            100% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1); opacity: 1; }
         }
-        
-        @keyframes slideUp {
-            from { transform: translateY(50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+        @keyframes ov-pulse { 0%,100% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1); } 50% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) scale(1.08); } }
+        @keyframes ov-shake {
+            0%,100% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateX(0); }
+            20% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateX(-12px); }
+            40% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateX(12px); }
+            60% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateX(-8px); }
+            80% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateX(8px); }
         }
-        
-        @keyframes slideLeft {
-            from { transform: translateX(100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        @keyframes ov-float { 0%,100% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateY(0); } 50% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)) translateY(-18px); } }
+        @keyframes ov-spin { from { transform: translate(var(--tx),var(--ty)) rotate(0deg); } to { transform: translate(var(--tx),var(--ty)) rotate(360deg); } }
+        @keyframes ov-swing { 0%,100% { transform: translate(var(--tx),var(--ty)) rotate(0deg); } 25% { transform: translate(var(--tx),var(--ty)) rotate(8deg); } 75% { transform: translate(var(--tx),var(--ty)) rotate(-8deg); } }
+        @keyframes ov-flicker { 0%,100% { opacity: 1; } 10% { opacity: 0.1; } 30% { opacity: 1; } 50% { opacity: 0.3; } 70% { opacity: 1; } 90% { opacity: 0.2; } }
+        @keyframes ov-rollIn { from { transform: translate(calc(var(--tx) - 200px),var(--ty)) rotate(-120deg); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity: 1; } }
+        @keyframes ov-dropIn {
+            0% { transform: translate(var(--tx),calc(var(--ty) - 200px)) rotate(10deg); opacity: 0; }
+            70% { transform: translate(var(--tx),calc(var(--ty) + 12px)) rotate(-2deg); }
+            100% { transform: translate(var(--tx),var(--ty)) rotate(var(--rot)); opacity: 1; }
         }
-        
-        @keyframes slideRight {
-            from { transform: translateX(-100px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-        }
-        
-        @keyframes zoomIn {
-            from { transform: scale(0.5); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+        @keyframes ov-flipX { from { transform: translate(var(--tx),var(--ty)) rotateX(90deg); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotateX(0); opacity: 1; } }
+        @keyframes ov-flipY { from { transform: translate(var(--tx),var(--ty)) rotateY(90deg); opacity: 0; } to { transform: translate(var(--tx),var(--ty)) rotateY(0); opacity: 1; } }
+        @keyframes ov-typewriter { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
+        @keyframes ov-glitch {
+            0%,100% { transform: translate(var(--tx),var(--ty)); }
+            20% { transform: translate(calc(var(--tx) - 4px),calc(var(--ty) + 2px)); }
+            40% { transform: translate(calc(var(--tx) + 4px),calc(var(--ty) - 2px)); }
+            60% { transform: translate(calc(var(--tx) - 2px),calc(var(--ty) - 4px)); }
+            80% { transform: translate(calc(var(--tx) + 2px),calc(var(--ty) + 4px)); }
         }
     `;
-    
+
     let html = '<div class="overlay-container">';
-    let js = `
-        // Overlay controller
-        let autoHideTimer;
-        let loopInterval;
-        
-        function startAutoHide(duration) {
-            if (duration && duration > 0) {
-                autoHideTimer = setTimeout(() => {
-                    document.body.style.transition = 'opacity 0.3s';
-                    document.body.style.opacity = '0';
-                    setTimeout(() => {
-                        if (window.parent && window.parent.overlayComplete) {
-                            window.parent.overlayComplete();
-                        }
-                    }, 300);
-                }, duration * 1000);
-            }
-        }
-        
-        function startLoop(elements, loopCount, delay) {
-            let count = 0;
-            loopInterval = setInterval(() => {
-                count++;
-                if (loopCount > 0 && count >= loopCount) {
-                    clearInterval(loopInterval);
-                }
-            }, delay * 1000);
-        }
-        
-        // Listen for stream state from Android
-        function onStreamState(isLive) {
-            console.log('Stream state:', isLive);
-            if (typeof window.streamStateChanged === 'function') {
-                window.streamStateChanged(isLive);
-            }
-        }
-        
-        // Cleanup
-        window.overlayComplete = function() {
-            if (autoHideTimer) clearTimeout(autoHideTimer);
-            if (loopInterval) clearInterval(loopInterval);
-        };
-    `;
-    
-    elements.forEach((el, idx) => {
-        const elementId = `el_${idx}`;
-        let positionCss = '';
-        
-        // Position styles
-        switch(el.position) {
-            case 'top-left':
-                positionCss = `top: ${el.y || 20}px; left: ${el.x || 20}px;`;
-                break;
-            case 'top-center':
-                positionCss = `top: ${el.y || 20}px; left: 50%; transform: translateX(-50%);`;
-                break;
-            case 'top-right':
-                positionCss = `top: ${el.y || 20}px; right: ${el.x || 20}px;`;
-                break;
-            case 'middle-left':
-                positionCss = `top: 50%; left: ${el.x || 20}px; transform: translateY(-50%);`;
-                break;
-            case 'center':
-                positionCss = `top: 50%; left: 50%; transform: translate(-50%, -50%);`;
-                break;
-            case 'middle-right':
-                positionCss = `top: 50%; right: ${el.x || 20}px; transform: translateY(-50%);`;
-                break;
-            case 'bottom-left':
-                positionCss = `bottom: ${el.y || 20}px; left: ${el.x || 20}px;`;
-                break;
-            case 'bottom-center':
-                positionCss = `bottom: ${el.y || 20}px; left: 50%; transform: translateX(-50%);`;
-                break;
-            case 'bottom-right':
-                positionCss = `bottom: ${el.y || 20}px; right: ${el.x || 20}px;`;
-                break;
-            case 'lower-third':
-                positionCss = `bottom: 80px; left: ${el.x || 20}px;`;
-                break;
-            case 'absolute':
-                positionCss = `top: ${el.y || 0}%; left: ${el.x || 0}%;`;
-                break;
-            default:
-                positionCss = `bottom: ${el.y || 20}px; left: ${el.x || 20}px;`;
-        }
-        
-        // Animation styles
-        let animationCss = '';
+
+    const loopingAnims = ['pulse','swing','float','spin','flicker'];
+
+    elements.forEach(el => {
+        const tx = `${el.x || 0}px`;
+        const ty = `${el.y || 0}px`;
+        const rot = `${el.rotation || 0}deg`;
+
+        let styles = [
+            `--tx: ${tx}`,
+            `--ty: ${ty}`,
+            `--rot: ${rot}`,
+            `z-index: ${el.zIndex || 10}`,
+            `opacity: ${(el.opacity ?? 100) / 100}`,
+            `transform: translate(${tx},${ty}) rotate(${rot})`
+        ];
+
         if (el.animation && el.animation !== 'none') {
-            animationCss = `animation: ${el.animation} ${el.animationDuration || 0.5}s ${el.animationDelay || 0}s ease-out both;`;
+            const isLoop = loopingAnims.includes(el.animation);
+            const iter = isLoop ? 'infinite' : '1';
+            const fill = isLoop ? 'none' : 'both';
+            styles.push(`animation: ov-${el.animation} ${el.animDuration || 0.6}s ${el.animEasing || 'ease-out'} ${el.animDelay || 0}s ${iter} ${fill}`);
         }
-        
-        // Base element styles
-        const baseStyle = `
-            position: absolute;
-            ${positionCss}
-            z-index: ${el.zIndex || 10};
-            opacity: ${(el.opacity || 100) / 100};
-            ${animationCss}
-        `;
-        
-        switch(el.type) {
+
+        let content = '';
+        let extraStyles = [];
+
+        switch (el.type) {
             case 'shape':
-                let shapeCss = '';
                 if (el.shapeType === 'rectangle') {
-                    shapeCss = `
-                        width: ${el.width || 100}px;
-                        height: ${el.height || 100}px;
-                        background: ${el.color || '#4DFFA0'};
-                        border-radius: ${el.borderRadius || 0}px;
-                    `;
+                    extraStyles.push(`width:${el.width}px`, `height:${el.height}px`, `background:${el.color}`, `border-radius:${el.borderRadius||0}px`);
                 } else if (el.shapeType === 'circle') {
-                    const size = el.size || 100;
-                    shapeCss = `
-                        width: ${size}px;
-                        height: ${size}px;
-                        background: ${el.color || '#4DFFA0'};
-                        border-radius: 50%;
-                    `;
+                    extraStyles.push(`width:${el.size}px`, `height:${el.size}px`, `background:${el.color}`, `border-radius:50%`);
                 } else if (el.shapeType === 'line') {
-                    shapeCss = `
-                        width: ${el.width || 100}px;
-                        height: ${el.thickness || 2}px;
-                        background: ${el.color || '#4DFFA0'};
-                        border-radius: ${(el.thickness || 2) / 2}px;
-                    `;
-                    if (el.rotation) {
-                        shapeCss += `transform: rotate(${el.rotation}deg); transform-origin: left center;`;
-                    }
+                    extraStyles.push(`width:${el.width}px`, `height:${el.thickness}px`, `background:${el.color}`, `border-radius:${(el.thickness||2)/2}px`);
                 }
-                html += `<div id="${elementId}" style="${baseStyle} ${shapeCss}"></div>`;
                 break;
-                
+
             case 'image':
-                html += `<img id="${elementId}" src="${el.src}" style="${baseStyle} width: ${el.width || 200}px; height: ${el.height || 'auto'}; object-fit: ${el.objectFit || 'contain'}; border-radius: ${el.borderRadius || 0}px;" alt="">`;
+                extraStyles.push(`width:${el.width}px`, `border-radius:${el.borderRadius||0}px`, `display:block`);
+                content = `<img src="${el.src}" style="width:100%;height:auto;border-radius:${el.borderRadius||0}px;display:block;" alt="">`;
                 break;
-                
-            case 'gif':
-                html += `<img id="${elementId}" src="${el.src}" style="${baseStyle} width: ${el.width || 200}px; height: ${el.height || 'auto'}; object-fit: ${el.objectFit || 'contain'};" alt="" loop="${el.loop ? 'infinite' : ''}">`;
-                break;
-                
-            case 'video':
-                html += `<video id="${elementId}" src="${el.src}" style="${baseStyle} width: ${el.width || 320}px; height: ${el.height || 180}px; object-fit: ${el.objectFit || 'cover'}; border-radius: ${el.borderRadius || 0}px;" autoplay loop muted playsinline></video>`;
-                break;
-                
-            case 'text':
+
+            case 'text': {
                 const shadowMap = {
                     none: 'none',
-                    soft: '2px 2px 8px rgba(0,0,0,0.3)',
-                    hard: '2px 2px 0px rgba(0,0,0,0.8)',
-                    glow: `0 0 15px ${el.color || '#4DFFA0'}`
+                    soft: '2px 2px 8px rgba(0,0,0,0.4)',
+                    hard: '2px 2px 0 rgba(0,0,0,0.9)',
+                    glow: `0 0 20px ${el.color}`
                 };
-                html += `<div id="${elementId}" style="${baseStyle} color: ${el.color || '#ffffff'}; font-size: ${el.fontSize || 24}px; font-weight: ${el.fontWeight || 'bold'}; font-family: ${el.fontFamily || 'Arial, sans-serif'}; text-align: ${el.textAlign || 'center'}; text-shadow: ${shadowMap[el.textShadow] || 'none'}; white-space: ${el.whiteSpace || 'normal'}; max-width: ${el.maxWidth || 400}px; background: ${el.bgColor || 'transparent'}; padding: ${el.padding || 0}px; border-radius: ${el.borderRadius || 0}px;">${el.content || 'Text'}</div>`;
+                extraStyles.push(
+                    `color:${el.color}`, `font-size:${el.fontSize}px`, `font-weight:${el.fontWeight}`,
+                    `font-family:${el.fontFamily}`, `text-align:${el.textAlign}`, `max-width:${el.maxWidth}px`,
+                    `background:${el.bgColor}`, `padding:${el.padding||0}px`, `border-radius:${el.borderRadius||0}px`,
+                    `white-space:pre-wrap`, `text-shadow:${shadowMap[el.textShadow]||'none'}`
+                );
+                content = el.content;
                 break;
-                
-            case 'social':
-                const socialIcons = {
-                    youtube: '▶️',
-                    twitch: '🎮',
-                    tiktok: '🎵',
-                    instagram: '📷',
-                    twitter: '🐦',
-                    facebook: '👍',
-                    discord: '💬'
-                };
-                html += `<div id="${elementId}" style="${baseStyle} display: flex; align-items: center; gap: 12px; background: ${el.bgColor || 'rgba(0,0,0,0.7)'}; padding: ${el.padding || '8px 16px'}; border-radius: ${el.borderRadius || 50}px; backdrop-filter: blur(10px);">
-                            <span style="font-size: ${el.iconSize || 24}px;">${socialIcons[el.platform] || '💬'}</span>
-                            <span style="color: ${el.textColor || '#ffffff'}; font-size: ${el.fontSize || 14}px; font-weight: ${el.fontWeight || 'bold'};">@${el.username}</span>
-                            ${el.showLiveBadge ? '<span style="color: #ff4444; font-size: 12px; background: rgba(255,68,68,0.2); padding: 2px 8px; border-radius: 20px;">LIVE</span>' : ''}
-                        </div>`;
+            }
+
+            case 'social': {
+                const icons = { youtube: '▶', twitch: '◉', tiktok: '♪', instagram: '◎', twitter: '𝕏', facebook: 'f' };
+                extraStyles.push(`background:${el.bgColor}`, `padding:${el.padding}`, `border-radius:${el.borderRadius||0}px`, `display:inline-block`);
+                content = `<div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:${el.iconSize}px">${icons[el.platform] || '◈'}</span>
+                    <span style="color:${el.textColor};font-size:${el.fontSize}px;font-weight:bold">@${el.username}</span>
+                    ${el.showLiveBadge ? '<span style="color:#ff4444;font-size:13px;background:rgba(255,68,68,0.2);padding:2px 8px;border-radius:20px">LIVE</span>' : ''}
+                </div>`;
                 break;
+            }
         }
+
+        html += `<div class="ov-el" style="${styles.concat(extraStyles).join(';')}">${content}</div>`;
     });
-    
+
     html += '</div>';
-    
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Overlay</title>
-    <style>${css}</style>
+    <style>
+        ${css}
+        html, body { background: transparent; }
+        .overlay-container {
+            transform: scale(min(100vw / ${width}, 100vh / ${height}));
+        }
+    </style>
 </head>
 <body>
     ${html}
-    <script>
-        ${js}
-        
-        // Auto-hide if duration set
-        const DURATION = ${design.duration || 0};
-        const LOOP_COUNT = ${design.loopCount || 1};
-        const LOOP_DELAY = ${design.loopDelay || 0};
-        
-        if (DURATION > 0) {
-            startAutoHide(DURATION);
-        }
-        
-        if (LOOP_COUNT > 1 && LOOP_DELAY > 0) {
-            startLoop(null, LOOP_COUNT, LOOP_DELAY);
-        }
-        
-        // Handle visibility
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Pause videos when hidden
-                document.querySelectorAll('video').forEach(v => v.pause());
-            } else {
-                // Resume videos when visible
-                document.querySelectorAll('video').forEach(v => v.play());
-            }
-        });
-    </script>
 </body>
 </html>`;
 }
