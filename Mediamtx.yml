@@ -1,0 +1,36 @@
+###############################################
+# General
+
+logLevel: info
+logDestinations: [stdout]
+
+# Render provides the port to bind via $PORT env var.
+# mediamtx supports env var substitution.
+api: no
+
+###############################################
+# RTMP - ingest (people push here)
+rtmp: yes
+rtmpAddress: :1935
+
+###############################################
+# HLS - output (your phone pulls here)
+hls: yes
+hlsAddress: :8888
+hlsAllowOrigin: '*'
+hlsVariant: lowLatency
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentCount: 7
+
+###############################################
+# Disable unused protocols to reduce resource usage
+rtsp: no
+webrtc: no
+srt: no
+
+###############################################
+# Paths
+paths:
+  all_others:
+    source: publisher
