@@ -131,6 +131,447 @@ app.delete('/api/template/:id', async (req, res) => {
 })
 
 // ============================================
+// OVERLAY DESIGN API
+// ============================================
+
+// Generate unique slug
+function generateSlug() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let slug = '';
+    for (let i = 0; i < 8; i++) {
+        slug += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return slug;
+}
+
+// Save overlay design
+app.post('/api/overlay/save', async (req, res) => {
+    try {
+        const { name, description, design_json } = req.body;
+        
+        if (!name || !design_json) {
+            return res.status(400).json({ error: 'Name and design_json required' });
+        }
+        
+        // Generate unique slug
+        let slug = generateSlug();
+        let exists = true;
+        while (exists) {
+            const { data, error } = await supabase
+                .from('overlay_designs')
+                .select('slug')
+                .eq('slug', slug)
+                .single();
+            if (error || !data) {
+                exists = false;
+            } else {
+                slug = generateSlug();
+            }
+        }
+        
+        const { data, error } = await supabase
+            .from('overlay_designs')
+            .insert([{
+                slug: slug,
+                name: name,
+                description: description || '',
+                design_json: design_json
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        res.json({
+            success: true,
+            id: data.id,
+            slug: data.slug,
+            url: `${SELF_URL}/o/${slug}`
+        });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get all designs
+app.get('/api/overlay/designs', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('overlay_designs')
+            .select('id, slug, name, description, created_at, updated_at, view_count')
+            .order('updated_at', { ascending: false });
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get single design by slug
+app.get('/api/overlay/design/:slug', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('overlay_designs')
+            .select('*')
+            .eq('slug', req.params.slug)
+            .single();
+        
+        if (error) throw error;
+        
+        // Increment view count
+        await supabase
+            .from('overlay_designs')
+            .update({ view_count: (data.view_count || 0) + 1 })
+            .eq('slug', req.params.slug);
+        
+        res.json(data);
+    } catch (error) {
+        res.status(404).json({ error: 'Design not found' });
+    }
+});
+
+// Delete design
+app.delete('/api/overlay/design/:id', async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('overlay_designs')
+            .delete()
+            .eq('id', req.params.id);
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Render overlay page (transparent, for WebView)
+app.get('/o/:slug', async (req, res) => {
+    try {
+        const { data: design, error } = await supabase
+            .from('overlay_designs')
+            .select('*')
+            .eq('slug', req.params.slug)
+            .single();
+        
+        if (error || !design) {
+            return res.status(404).send('<h1>Overlay not found</h1>');
+        }
+        
+        const html = renderOverlayHTML(design.design_json);
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+        
+    } catch (error) {
+        res.status(500).send(`<h1>Error</h1><p>${error.message}</p>`);
+    }
+});
+
+// Render overlay HTML from design JSON
+function renderOverlayHTML(design) {
+    const { width = 1080, height = 1920, elements = [], background = 'transparent' } = design;
+    
+    let css = `
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: ${background};
+            overflow: hidden;
+            position: relative;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .overlay-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes slideLeft {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideRight {
+            from { transform: translateX(-100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        @keyframes zoomIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+    `;
+    
+    let html = '<div class="overlay-container">';
+    let js = `
+        // Overlay controller
+        let autoHideTimer;
+        let loopInterval;
+        
+        function startAutoHide(duration) {
+            if (duration && duration > 0) {
+                autoHideTimer = setTimeout(() => {
+                    document.body.style.transition = 'opacity 0.3s';
+                    document.body.style.opacity = '0';
+                    setTimeout(() => {
+                        if (window.parent && window.parent.overlayComplete) {
+                            window.parent.overlayComplete();
+                        }
+                    }, 300);
+                }, duration * 1000);
+            }
+        }
+        
+        function startLoop(elements, loopCount, delay) {
+            let count = 0;
+            loopInterval = setInterval(() => {
+                count++;
+                if (loopCount > 0 && count >= loopCount) {
+                    clearInterval(loopInterval);
+                }
+            }, delay * 1000);
+        }
+        
+        // Listen for stream state from Android
+        function onStreamState(isLive) {
+            console.log('Stream state:', isLive);
+            if (typeof window.streamStateChanged === 'function') {
+                window.streamStateChanged(isLive);
+            }
+        }
+        
+        // Cleanup
+        window.overlayComplete = function() {
+            if (autoHideTimer) clearTimeout(autoHideTimer);
+            if (loopInterval) clearInterval(loopInterval);
+        };
+    `;
+    
+    elements.forEach((el, idx) => {
+        const elementId = `el_${idx}`;
+        let positionCss = '';
+        
+        // Position styles
+        switch(el.position) {
+            case 'top-left':
+                positionCss = `top: ${el.y || 20}px; left: ${el.x || 20}px;`;
+                break;
+            case 'top-center':
+                positionCss = `top: ${el.y || 20}px; left: 50%; transform: translateX(-50%);`;
+                break;
+            case 'top-right':
+                positionCss = `top: ${el.y || 20}px; right: ${el.x || 20}px;`;
+                break;
+            case 'middle-left':
+                positionCss = `top: 50%; left: ${el.x || 20}px; transform: translateY(-50%);`;
+                break;
+            case 'center':
+                positionCss = `top: 50%; left: 50%; transform: translate(-50%, -50%);`;
+                break;
+            case 'middle-right':
+                positionCss = `top: 50%; right: ${el.x || 20}px; transform: translateY(-50%);`;
+                break;
+            case 'bottom-left':
+                positionCss = `bottom: ${el.y || 20}px; left: ${el.x || 20}px;`;
+                break;
+            case 'bottom-center':
+                positionCss = `bottom: ${el.y || 20}px; left: 50%; transform: translateX(-50%);`;
+                break;
+            case 'bottom-right':
+                positionCss = `bottom: ${el.y || 20}px; right: ${el.x || 20}px;`;
+                break;
+            case 'lower-third':
+                positionCss = `bottom: 80px; left: ${el.x || 20}px;`;
+                break;
+            case 'absolute':
+                positionCss = `top: ${el.y || 0}%; left: ${el.x || 0}%;`;
+                break;
+            default:
+                positionCss = `bottom: ${el.y || 20}px; left: ${el.x || 20}px;`;
+        }
+        
+        // Animation styles
+        let animationCss = '';
+        if (el.animation && el.animation !== 'none') {
+            animationCss = `animation: ${el.animation} ${el.animationDuration || 0.5}s ${el.animationDelay || 0}s ease-out both;`;
+        }
+        
+        // Base element styles
+        const baseStyle = `
+            position: absolute;
+            ${positionCss}
+            z-index: ${el.zIndex || 10};
+            opacity: ${(el.opacity || 100) / 100};
+            ${animationCss}
+        `;
+        
+        switch(el.type) {
+            case 'shape':
+                let shapeCss = '';
+                if (el.shapeType === 'rectangle') {
+                    shapeCss = `
+                        width: ${el.width || 100}px;
+                        height: ${el.height || 100}px;
+                        background: ${el.color || '#4DFFA0'};
+                        border-radius: ${el.borderRadius || 0}px;
+                    `;
+                } else if (el.shapeType === 'circle') {
+                    const size = el.size || 100;
+                    shapeCss = `
+                        width: ${size}px;
+                        height: ${size}px;
+                        background: ${el.color || '#4DFFA0'};
+                        border-radius: 50%;
+                    `;
+                } else if (el.shapeType === 'line') {
+                    shapeCss = `
+                        width: ${el.width || 100}px;
+                        height: ${el.thickness || 2}px;
+                        background: ${el.color || '#4DFFA0'};
+                        border-radius: ${(el.thickness || 2) / 2}px;
+                    `;
+                    if (el.rotation) {
+                        shapeCss += `transform: rotate(${el.rotation}deg); transform-origin: left center;`;
+                    }
+                }
+                html += `<div id="${elementId}" style="${baseStyle} ${shapeCss}"></div>`;
+                break;
+                
+            case 'image':
+                html += `<img id="${elementId}" src="${el.src}" style="${baseStyle} width: ${el.width || 200}px; height: ${el.height || 'auto'}; object-fit: ${el.objectFit || 'contain'}; border-radius: ${el.borderRadius || 0}px;" alt="">`;
+                break;
+                
+            case 'gif':
+                html += `<img id="${elementId}" src="${el.src}" style="${baseStyle} width: ${el.width || 200}px; height: ${el.height || 'auto'}; object-fit: ${el.objectFit || 'contain'};" alt="" loop="${el.loop ? 'infinite' : ''}">`;
+                break;
+                
+            case 'video':
+                html += `<video id="${elementId}" src="${el.src}" style="${baseStyle} width: ${el.width || 320}px; height: ${el.height || 180}px; object-fit: ${el.objectFit || 'cover'}; border-radius: ${el.borderRadius || 0}px;" autoplay loop muted playsinline></video>`;
+                break;
+                
+            case 'text':
+                const shadowMap = {
+                    none: 'none',
+                    soft: '2px 2px 8px rgba(0,0,0,0.3)',
+                    hard: '2px 2px 0px rgba(0,0,0,0.8)',
+                    glow: `0 0 15px ${el.color || '#4DFFA0'}`
+                };
+                html += `<div id="${elementId}" style="${baseStyle} color: ${el.color || '#ffffff'}; font-size: ${el.fontSize || 24}px; font-weight: ${el.fontWeight || 'bold'}; font-family: ${el.fontFamily || 'Arial, sans-serif'}; text-align: ${el.textAlign || 'center'}; text-shadow: ${shadowMap[el.textShadow] || 'none'}; white-space: ${el.whiteSpace || 'normal'}; max-width: ${el.maxWidth || 400}px; background: ${el.bgColor || 'transparent'}; padding: ${el.padding || 0}px; border-radius: ${el.borderRadius || 0}px;">${el.content || 'Text'}</div>`;
+                break;
+                
+            case 'social':
+                const socialIcons = {
+                    youtube: '▶️',
+                    twitch: '🎮',
+                    tiktok: '🎵',
+                    instagram: '📷',
+                    twitter: '🐦',
+                    facebook: '👍',
+                    discord: '💬'
+                };
+                html += `<div id="${elementId}" style="${baseStyle} display: flex; align-items: center; gap: 12px; background: ${el.bgColor || 'rgba(0,0,0,0.7)'}; padding: ${el.padding || '8px 16px'}; border-radius: ${el.borderRadius || 50}px; backdrop-filter: blur(10px);">
+                            <span style="font-size: ${el.iconSize || 24}px;">${socialIcons[el.platform] || '💬'}</span>
+                            <span style="color: ${el.textColor || '#ffffff'}; font-size: ${el.fontSize || 14}px; font-weight: ${el.fontWeight || 'bold'};">@${el.username}</span>
+                            ${el.showLiveBadge ? '<span style="color: #ff4444; font-size: 12px; background: rgba(255,68,68,0.2); padding: 2px 8px; border-radius: 20px;">LIVE</span>' : ''}
+                        </div>`;
+                break;
+        }
+    });
+    
+    html += '</div>';
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Overlay</title>
+    <style>${css}</style>
+</head>
+<body>
+    ${html}
+    <script>
+        ${js}
+        
+        // Auto-hide if duration set
+        const DURATION = ${design.duration || 0};
+        const LOOP_COUNT = ${design.loopCount || 1};
+        const LOOP_DELAY = ${design.loopDelay || 0};
+        
+        if (DURATION > 0) {
+            startAutoHide(DURATION);
+        }
+        
+        if (LOOP_COUNT > 1 && LOOP_DELAY > 0) {
+            startLoop(null, LOOP_COUNT, LOOP_DELAY);
+        }
+        
+        // Handle visibility
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Pause videos when hidden
+                document.querySelectorAll('video').forEach(v => v.pause());
+            } else {
+                // Resume videos when visible
+                document.querySelectorAll('video').forEach(v => v.play());
+            }
+        });
+    </script>
+</body>
+</html>`;
+}
+// ============================================
 // SCHEDULE CRUD
 // ============================================
 
