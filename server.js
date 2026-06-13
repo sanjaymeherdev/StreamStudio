@@ -3,6 +3,7 @@ const express = require('express')
 const fetch = require('node-fetch')
 const path = require('path')
 const { createClient } = require('@supabase/supabase-js')
+const ws = require('ws')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -12,7 +13,11 @@ const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://yfjzvpzgecbnfysacbjq.supabase.co'
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlmanp2cHpnZWNibmZ5c2FjYmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5OTY2MzcsImV4cCI6MjA4MzU3MjYzN30.v27rjgUTGuHAq6sAjhjQYWb-Y9O23f5FpwXQBFZyjmQ'
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    realtime: {
+        transport: ws
+    }
+})
 
 // Middleware
 app.use(express.json())
@@ -1097,6 +1102,112 @@ app.put('/api/overlay/update/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// ============================================
+// JS TEMPLATE ENDPOINTS FOR INJECTOR
+// ============================================
+
+// Get all JS templates with placeholder info
+app.get('/api/js-templates', async (req, res) => {
+    try {
+        // Read JS files from public/js directory
+        const fs = require('fs');
+        const jsDir = path.join(__dirname, 'public', 'js');
+        const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
+        
+        const templates = files.map(file => {
+            const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
+            const placeholders = findPlaceholdersInJs(content);
+            
+            return {
+                id: file.replace('.js', ''),
+                name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                filename: file,
+                js_code: content,
+                placeholders: placeholders
+            };
+        });
+        
+        res.json(templates);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Helper to extract placeholders from JS code
+function findPlaceholdersInJs(jsCode) {
+    const matches = jsCode.match(/\{\{([^}]+)\}\}/g);
+    if (!matches) return [];
+    
+    const placeholders = [...new Set(matches.map(m => {
+        return m.slice(2, -2).trim();
+    }))];
+    
+    return placeholders;
+}
+
+// POST endpoint to inject JS into Supabase realtime table
+app.post('/api/overlay-inject', async (req, res) => {
+    try {
+        const { js_code, table_name, device_slug, template_name } = req.body;
+        
+        if (!js_code) {
+            return res.status(400).json({ error: 'js_code is required' });
+        }
+        
+        const tableName = table_name || 'overlay_injects';
+        
+        // Insert into Supabase table
+        const { data, error } = await supabase
+            .from(tableName)
+            .insert([{
+                js_code: js_code,
+                device_slug: device_slug || null,
+                template_name: template_name || null,
+                created_at: new Date(),
+                status: 'pending'
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        res.json({
+            success: true,
+            id: data.id,
+            message: 'JS injected successfully'
+        });
+    } catch (error) {
+        console.error('Overlay inject error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET endpoint to retrieve stored JS injections
+app.get('/api/overlay-injects', async (req, res) => {
+    try {
+        const { device_slug, limit = 50 } = req.query;
+        
+        let query = supabase
+            .from('overlay_injects')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(parseInt(limit));
+        
+        if (device_slug) {
+            query = query.eq('device_slug', device_slug);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ============================================
 // START SERVER
 // ============================================
@@ -1106,5 +1217,7 @@ app.listen(PORT, () => {
     console.log(`   Health: ${SELF_URL}/health`)
     console.log(`   Templates API: ${SELF_URL}/api/templates`)
     console.log(`   Schedules API: ${SELF_URL}/api/schedules`)
+    console.log(`   JS Templates API: ${SELF_URL}/api/js-templates`)
+    console.log(`   Overlay Inject API: ${SELF_URL}/api/overlay-inject`)
     console.log(`   Self-cron active (every 60 seconds)`)
 })
