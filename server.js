@@ -1102,37 +1102,78 @@ app.put('/api/overlay/update/:id', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
 // ============================================
 // JS TEMPLATE ENDPOINTS FOR INJECTOR
 // ============================================
 
-// Get all JS templates with placeholder info
+// Get all JS templates - UNIFIED endpoint merging file-based and DB-based templates
 app.get('/api/js-templates', async (req, res) => {
     try {
-        // Read JS files from public/js directory
         const fs = require('fs');
         const jsDir = path.join(__dirname, 'public', 'js');
-        const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
         
-        const templates = files.map(file => {
-            const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
-            const placeholders = findPlaceholdersInJs(content);
-            
-            return {
-                id: file.replace('.js', ''),
-                name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                filename: file,
-                js_code: content,
-                placeholders: placeholders
-            };
-        });
-        
-        res.json(templates);
+        // Read file-based templates
+        let fileTemplates = [];
+        try {
+            if (fs.existsSync(jsDir)) {
+                const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
+                fileTemplates = files.map(file => {
+                    const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
+                    const placeholders = findPlaceholdersInJs(content);
+                    return {
+                        id: `file_${file.replace('.js', '')}`,
+                        name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                        filename: file,
+                        js_code: content,
+                        placeholders: placeholders,
+                        source: 'file',
+                        category: categorizeTemplate(file)
+                    };
+                });
+            }
+        } catch (fileErr) {
+            console.error('Error reading file templates:', fileErr.message);
+        }
+
+        // Read DB-based templates
+        let dbTemplates = [];
+        try {
+            const { data, error } = await supabase
+                .from('js_templates')
+                .select('*')
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                dbTemplates = data.map(t => ({
+                    ...t,
+                    id: `db_${t.id}`,
+                    source: 'database'
+                }));
+            }
+        } catch (dbErr) {
+            console.error('Error reading DB templates:', dbErr.message);
+        }
+
+        // Merge both sources
+        const allTemplates = [...fileTemplates, ...dbTemplates];
+        res.json(allTemplates);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+// Helper to categorize file-based templates by filename patterns
+function categorizeTemplate(filename) {
+    const lower = filename.toLowerCase();
+    if (lower.includes('alert')) return 'alert';
+    if (lower.includes('banner') || lower.includes('social')) return 'banner';
+    if (lower.includes('widget') || lower.includes('leaderboard') || lower.includes('poll')) return 'widget';
+    if (lower.includes('countdown') || lower.includes('timer')) return 'widget';
+    if (lower.includes('qr')) return 'widget';
+    if (lower.includes('weather')) return 'widget';
+    return 'general';
+}
 
 // Helper to extract placeholders from JS code
 function findPlaceholdersInJs(jsCode) {

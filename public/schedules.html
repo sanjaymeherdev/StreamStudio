@@ -206,11 +206,26 @@
             </div>
 
             <div id="jsModeExisting">
+                <!-- Category Filter & Search -->
+                <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+                    <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px">
+                        <label>Category Filter</label>
+                        <select id="templateCategoryFilter" onchange="filterTemplatesByCategory()" style="width:100%">
+                            <option value="all">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;flex:2;min-width:200px">
+                        <label>Search Templates</label>
+                        <input type="text" id="templateSearch" placeholder="Type to search..." oninput="filterTemplatesByCategory()" style="width:100%">
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label>JS Template</label>
                     <select id="jsTemplateSelect" onchange="onJsTemplateChange()">
                         <option value="">Loading JS templates…</option>
                     </select>
+                    <div id="templateSourceInfo" style="margin-top:6px;display:none"></div>
                 </div>
                 <div id="placeholderSection" style="display:none">
                     <p style="font-size:12px;color:#a0aec0;margin-bottom:8px">📌 Fill in placeholder values:</p>
@@ -507,43 +522,148 @@ async function loadTemplates() {
 }
 
 // ------------------- JS TEMPLATES -------------------
+let jsTemplatesLoadTimeout;
+
 async function loadJsTemplates() {
-    try {
-        const res = await fetch('/api/js-templates');
-        jsTemplates = await res.json();
-        const sel = document.getElementById('jsTemplateSelect');
-        const prevValue = sel.value;
-        sel.innerHTML = '<option value="">Select a JS template…</option>';
-        jsTemplates.forEach(t => {
-            let o = new Option(`${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id);
-            sel.appendChild(o);
-        });
-        // keep selection if it still exists (e.g. after saving a new template)
-        if (prevValue && jsTemplates.some(t => t.id === prevValue)) {
-            sel.value = prevValue;
-            onJsTemplateChange();
+    clearTimeout(jsTemplatesLoadTimeout);
+    const sel = document.getElementById('jsTemplateSelect');
+    sel.innerHTML = '<option value="">Loading JS templates…</option>';
+    
+    // Timeout warning if loading takes too long
+    jsTemplatesLoadTimeout = setTimeout(() => {
+        if (sel.innerHTML.includes('Loading')) {
+            sel.innerHTML = '<option value="">⚠️ Loading timeout - refresh page</option>';
         }
-    } catch(e) { console.error(e); }
+    }, 8000);
+    
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch('/api/js-templates', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        
+        jsTemplates = await res.json();
+        clearTimeout(jsTemplatesLoadTimeout);
+        
+        renderTemplateDropdown();
+        updateCategoryFilter();
+        
+    } catch(e) {
+        clearTimeout(jsTemplatesLoadTimeout);
+        console.error('Failed to load JS templates:', e);
+        sel.innerHTML = '<option value="">❌ Failed to load - check console</option>';
+    }
+}
+
+function renderTemplateDropdown(filteredTemplates = null) {
+    const sel = document.getElementById('jsTemplateSelect');
+    const templatesToRender = filteredTemplates || jsTemplates;
+    const prevValue = sel.value;
+    
+    sel.innerHTML = '<option value="">Select a JS template…</option>';
+    
+    // Group by category
+    const categories = {};
+    templatesToRender.forEach(t => {
+        const cat = t.category || 'general';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(t);
+    });
+    
+    // Add optgroups for each category
+    Object.keys(categories).sort().forEach(cat => {
+        const group = document.createElement('optgroup');
+        group.label = cat.charAt(0).toUpperCase() + cat.slice(1) + ` (${categories[cat].length})`;
+        categories[cat].forEach(t => {
+            const sourceBadge = t.source === 'database' ? '🗄️' : '📁';
+            let o = new Option(`${sourceBadge} ${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id);
+            group.appendChild(o);
+        });
+        sel.appendChild(group);
+    });
+    
+    if (prevValue && templatesToRender.some(t => t.id === prevValue)) {
+        sel.value = prevValue;
+        onJsTemplateChange();
+    }
+}
+
+function updateCategoryFilter() {
+    const filterSel = document.getElementById('templateCategoryFilter');
+    if (!filterSel) return;
+    
+    const categories = [...new Set(jsTemplates.map(t => t.category || 'general'))].sort();
+    const prevValue = filterSel.value;
+    
+    filterSel.innerHTML = '<option value="all">All Categories</option>';
+    categories.forEach(cat => {
+        let o = new Option(cat.charAt(0).toUpperCase() + cat.slice(1), cat);
+        filterSel.appendChild(o);
+    });
+    
+    if (prevValue && categories.includes(prevValue)) {
+        filterSel.value = prevValue;
+    }
+}
+
+function filterTemplatesByCategory() {
+    const filterSel = document.getElementById('templateCategoryFilter');
+    const searchInput = document.getElementById('templateSearch');
+    const selectedCategory = filterSel ? filterSel.value : 'all';
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    const filtered = jsTemplates.filter(t => {
+        const matchesCategory = selectedCategory === 'all' || (t.category || 'general') === selectedCategory;
+        const matchesSearch = !searchTerm || t.name.toLowerCase().includes(searchTerm);
+        return matchesCategory && matchesSearch;
+    });
+    
+    renderTemplateDropdown(filtered);
 }
 
 function onJsTemplateChange() {
     const id = document.getElementById('jsTemplateSelect').value;
     currentJsTemplate = jsTemplates.find(t => t.id === id) || null;
+    
     const section = document.getElementById('placeholderSection');
     const grid = document.getElementById('placeholderGrid');
+    const preview = document.getElementById('jsPreview');
+    const sourceInfo = document.getElementById('templateSourceInfo');
+    
     grid.innerHTML = '';
-    document.getElementById('jsPreview').style.display = 'none';
-    if (!currentJsTemplate || !currentJsTemplate.placeholders?.length) { section.style.display = 'none'; return; }
+    preview.style.display = 'none';
+    
+    // Show source info (file vs database) and category
+    if (sourceInfo) {
+        if (currentJsTemplate) {
+            const source = currentJsTemplate.source || 'file';
+            const category = currentJsTemplate.category || 'general';
+            const sourceIcon = source === 'database' ? '🗄️ DB' : '📁 File';
+            sourceInfo.innerHTML = `<span class="badge" style="background:#0f3460;margin-right:8px">${sourceIcon}</span><span class="badge" style="background:#1a3a5c">${category}</span>`;
+            sourceInfo.style.display = 'block';
+        } else {
+            sourceInfo.style.display = 'none';
+        }
+    }
+    
+    if (!currentJsTemplate || !currentJsTemplate.placeholders?.length) { 
+        section.style.display = 'none';
+        return; 
+    }
+    
     section.style.display = 'block';
     currentJsTemplate.placeholders.forEach(ph => {
         const chip = document.createElement('div');
         chip.className = 'placeholder-chip';
-        chip.innerHTML = `<label>{{${ph}}}</label><input type="text" id="ph_${ph}" placeholder="Enter ${ph}">`;
+        chip.innerHTML = `<label>{{${ph}}}</label><input type="text" id="ph_${ph}" placeholder="Enter ${ph}" oninput="updateJsPreview()">`;
         grid.appendChild(chip);
     });
+    
+    // Auto-update preview when placeholders change
+    updateJsPreview();
 }
-
-function setJsMode(mode) {
     jsMode = mode;
     document.getElementById('jsModeExisting').style.display = mode === 'existing' ? 'block' : 'none';
     document.getElementById('jsModeCustom').style.display = mode === 'custom' ? 'block' : 'none';
