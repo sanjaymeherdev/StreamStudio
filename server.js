@@ -1106,32 +1106,32 @@ app.put('/api/overlay/update/:id', async (req, res) => {
 // ============================================
 // JS TEMPLATE ENDPOINTS FOR INJECTOR
 // ============================================
-
-// Get all JS templates with placeholder info
-app.get('/api/js-templates', async (req, res) => {
-    try {
-        // Read JS files from public/js directory
-        const fs = require('fs');
-        const jsDir = path.join(__dirname, 'public', 'js');
-        const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
-        
-        const templates = files.map(file => {
-            const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
-            const placeholders = findPlaceholdersInJs(content);
-            
-            return {
-                id: file.replace('.js', ''),
-                name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                filename: file,
-                js_code: content,
-                placeholders: placeholders
-            };
-        });
-        
-        res.json(templates);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+// 
+// // Get all JS templates with placeholder info
+// app.get('/api/js-templates', async (req, res) => {
+//     try {
+//         // Read JS files from public/js directory
+//         const fs = require('fs');
+//         const jsDir = path.join(__dirname, 'public', 'js');
+//         const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
+//         
+//         const templates = files.map(file => {
+//             const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
+//             const placeholders = findPlaceholdersInJs(content);
+//             
+//             return {
+//                 id: file.replace('.js', ''),
+//                 name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+//                 filename: file,
+//                 js_code: content,
+//                 placeholders: placeholders
+//             };
+//         });
+//         
+//         res.json(templates);
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
 });
 
 // Helper to extract placeholders from JS code
@@ -1221,3 +1221,113 @@ app.listen(PORT, () => {
     console.log(`   Overlay Inject API: ${SELF_URL}/api/overlay-inject`)
     console.log(`   Self-cron active (every 60 seconds)`)
 })
+// ============================================
+// DATABASE JS TEMPLATES CRUD
+// ============================================
+
+// Get all DB JS templates
+app.get('/api/js-templates/db', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('js_templates')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get single JS template by ID
+app.get('/api/js-template/:id', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('js_templates')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(404).json({ error: error.message });
+    }
+});
+
+// Create new JS template
+app.post('/api/js-templates', async (req, res) => {
+    try {
+        const { name, description, js_code, placeholders, category } = req.body;
+        
+        if (!name || !js_code) {
+            return res.status(400).json({ error: 'Name and js_code are required' });
+        }
+
+        // Extract placeholders if not provided
+        let extractedPlaceholders = placeholders;
+        if (!extractedPlaceholders) {
+            extractedPlaceholders = findPlaceholdersInJs(js_code);
+        }
+
+        const { data, error } = await supabase
+            .from('js_templates')
+            .insert([{
+                name: name,
+                description: description || '',
+                js_code: js_code,
+                placeholders: extractedPlaceholders,
+                category: category || 'general'
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Update JS template
+app.put('/api/js-template/:id', async (req, res) => {
+    try {
+        const { name, description, js_code, placeholders, category, is_active } = req.body;
+        
+        const { data, error } = await supabase
+            .from('js_templates')
+            .update({
+                name: name,
+                description: description,
+                js_code: js_code,
+                placeholders: placeholders,
+                category: category,
+                is_active: is_active !== undefined ? is_active : true,
+                updated_at: new Date()
+            })
+            .eq('id', req.params.id)
+            .select()
+            .single();
+        
+        if (error) throw error;
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete JS template
+app.delete('/api/js-template/:id', async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('js_templates')
+            .delete()
+            .eq('id', req.params.id);
+        
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
