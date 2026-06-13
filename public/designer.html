@@ -1,1682 +1,1385 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Overlay Designer - StreamStudio</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #0A0D14;
-            color: #DCE6F8;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        .app {
-            display: flex;
-            height: 100vh;
-        }
-        
-        /* Left Panel */
-        .panel {
-            width: 320px;
-            background: #0F1420;
-            border-right: 1px solid #1F2A3E;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            flex-shrink: 0;
-        }
-        
-        .panel-header {
-            padding: 16px;
-            border-bottom: 1px solid #1F2A3E;
-            background: #141A28;
-        }
-        
-        .panel-header h1 {
-            font-size: 16px;
-            font-family: 'Space Mono', monospace;
-            color: #4DFFA0;
-            margin-bottom: 8px;
-        }
-        
-        .panel-header input, .panel-header textarea {
-            width: 100%;
-            padding: 8px 12px;
-            background: #1A2232;
-            border: 1px solid #1F2A3E;
-            color: #DCE6F8;
-            border-radius: 6px;
-            font-size: 12px;
-            margin-top: 6px;
-        }
-        
-        .panel-header textarea {
-            resize: vertical;
-            min-height: 50px;
-        }
-        
-        /* Toolbar */
-        .toolbar {
-            padding: 12px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            border-bottom: 1px solid #1F2A3E;
-            background: #0F1420;
-        }
-        
-        .tool-btn {
-            padding: 8px 12px;
-            background: #1A2232;
-            border: 1px solid #1F2A3E;
-            color: #DCE6F8;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 11px;
-            font-family: 'Space Mono', monospace;
-            transition: all 0.2s;
-        }
-        
-        .tool-btn:hover {
-            background: #4DFFA0;
-            color: #0A0D14;
-            border-color: #4DFFA0;
-        }
-        
-        .tool-btn.active {
-            background: #4DFFA0;
-            color: #0A0D14;
-            border-color: #4DFFA0;
-        }
-        
-        .tool-btn.danger {
-            color: #ef4444;
-            border-color: #ef4444;
-        }
-        
-        .tool-btn.danger:hover {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .tool-btn.primary {
-            background: #4D9FFF;
-            color: white;
-            border-color: #4D9FFF;
-        }
-        
-        .tool-btn.success {
-            background: #4DFFA0;
-            color: #0A0D14;
-            border-color: #4DFFA0;
-        }
-        
-        /* Elements Section */
-        .elements-section {
-            flex: 3;
-            overflow-y: auto;
-            padding: 12px;
-            min-height: 300px;
-        }
-        
-        .section-title {
-            font-size: 10px;
-            font-family: 'Space Mono', monospace;
-            color: #6A7A9A;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-        
-        .elements-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .element-item {
-            background: #1A2232;
-            border: 1px solid #1F2A3E;
-            border-radius: 8px;
-            padding: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            position: relative;
-        }
-        
-        .element-item:hover {
-            border-color: #4DFFA0;
-            transform: translateX(4px);
-        }
-        
-        .element-item.selected {
-            border-color: #4DFFA0;
-            background: #1F2A3E;
-        }
-        
-        .element-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .element-icon {
-            font-size: 20px;
-        }
-        
-        .element-name {
-            flex: 1;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .element-delete {
-            background: none;
-            border: none;
-            color: #6A7A9A;
-            cursor: pointer;
-            font-size: 14px;
-            padding: 4px;
-        }
-        
-        .element-delete:hover {
-            color: #ef4444;
-        }
-        
-        .element-preview {
-            font-size: 10px;
-            color: #6A7A9A;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        
-        .empty-state {
-            text-align: center;
-            color: #6A7A9A;
-            padding: 40px 20px;
-            font-size: 12px;
-        }
-        
-        /* Properties Panel */
-        .properties-panel {
-            padding: 12px;
-            border-top: 1px solid #1F2A3E;
-            background: #0F1420;
-            display: none;
-            max-height: 40%;
-            overflow-y: auto;
-        }
-        
-        .properties-panel.show {
-            display: block;
-        }
-        
-        .prop-group {
-            margin-bottom: 12px;
-        }
-        
-        .prop-label {
-            font-size: 9px;
-            font-family: 'Space Mono', monospace;
-            color: #6A7A9A;
-            margin-bottom: 4px;
-            display: block;
-            text-transform: uppercase;
-        }
-        
-        .prop-input, .prop-select {
-            width: 100%;
-            padding: 6px 10px;
-            background: #1A2232;
-            border: 1px solid #1F2A3E;
-            color: #DCE6F8;
-            border-radius: 4px;
-            font-size: 11px;
-        }
-        
-        .prop-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-        
-        .color-input {
-            width: 100%;
-            height: 32px;
-            padding: 2px;
-            border-radius: 4px;
-            border: 1px solid #1F2A3E;
-            cursor: pointer;
-            background: #1A2232;
-        }
-        
-        /* Canvas Area */
-        .canvas-area {
-            flex: 1;
-            background: #07090F;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: auto;
-            position: relative;
-        }
-        
-        .canvas-wrapper {
-            position: relative;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-        
-        #canvas {
-            position: relative;
-            width: 1080px;
-            height: 1920px;
-            background: transparent;
-            overflow: hidden;
-            transform-origin: top left;
-            cursor: crosshair;
-        }
-        
-        /* Checkerboard pattern for transparent background */
-        #canvas::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image: 
-                linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
-                linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
-                linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
-            background-size: 20px 20px;
-            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            opacity: 0.3;
-            pointer-events: none;
-            z-index: 0;
-        }
-        
-        .canvas-layer {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-        
-        #layer-shapes, #layer-images, #layer-text, #layer-social {
-            pointer-events: auto;
-        }
-        
-        /* Transform Controls */
-        #transform-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10000;
-        }
-        
-        .transform-box {
-            position: absolute;
-            border: 2px solid #4DFFA0;
-            background: rgba(77, 255, 160, 0.05);
-            box-sizing: border-box;
-            pointer-events: none;
-        }
-        
-        .transform-handle {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #4DFFA0;
-            border: 2px solid #0A0D14;
-            border-radius: 50%;
-            pointer-events: auto;
-            cursor: pointer;
-            z-index: 10001;
-        }
-        
-        .transform-handle:hover {
-            transform: scale(1.3);
-            background: #4D9FFF;
-        }
-        
-        .transform-rotate {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            background: #4D9FFF;
-            border: 2px solid #0A0D14;
-            border-radius: 50%;
-            pointer-events: auto;
-            cursor: grab;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            z-index: 10001;
-        }
-        
-        .transform-rotate:active {
-            cursor: grabbing;
-        }
-        
-        .transform-delete {
-            position: absolute;
-            width: 24px;
-            height: 24px;
-            background: #ef4444;
-            border: 2px solid #0A0D14;
-            border-radius: 50%;
-            pointer-events: auto;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: white;
-            font-weight: bold;
-            z-index: 10001;
-        }
-        
-        /* Modal */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 20000;
-        }
-        
-        .modal.show {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: #0F1420;
-            border: 1px solid #1F2A3E;
-            border-radius: 12px;
-            width: 500px;
-            max-width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        
-        .modal-header {
-            padding: 16px;
-            border-bottom: 1px solid #1F2A3E;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-body {
-            padding: 16px;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-        
-        .element-option {
-            background: #1A2232;
-            border: 1px solid #1F2A3E;
-            border-radius: 8px;
-            padding: 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .element-option:hover {
-            border-color: #4DFFA0;
-            transform: translateY(-2px);
-        }
-        
-        .element-option .emoji {
-            font-size: 32px;
-            margin-bottom: 8px;
-        }
-        
-        .element-option .name {
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        /* Bottom Bar */
-        .bottom-bar {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            display: flex;
-            gap: 10px;
-            z-index: 1000;
-        }
-        
-        .save-btn {
-            padding: 12px 24px;
-            background: #4DFFA0;
-            border: none;
-            border-radius: 40px;
-            color: #0A0D14;
-            font-weight: bold;
-            font-family: 'Space Mono', monospace;
-            cursor: pointer;
-            font-size: 14px;
-            box-shadow: 0 4px 15px rgba(77,255,160,0.3);
-            transition: transform 0.2s;
-        }
-        
-        .save-btn:hover {
-            transform: scale(1.05);
-        }
-        
-        .new-btn {
-            background: #4D9FFF;
-            box-shadow: 0 4px 15px rgba(77,159,255,0.3);
-        }
-        
-        .toast {
-            position: fixed;
-            bottom: 100px;
-            right: 20px;
-            background: #4DFFA0;
-            color: #0A0D14;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-family: 'Space Mono', monospace;
-            font-size: 12px;
-            z-index: 1000;
-            display: none;
-            animation: slideIn 0.3s ease;
-            max-width: 400px;
-            white-space: pre-wrap;
-        }
-        
-        .toast.error {
-            background: #ef4444;
-            color: white;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #1A2232;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #4DFFA0;
-            border-radius: 3px;
-        }
-        
-        /* Draggable elements */
-        .draggable-element {
-            position: absolute;
-            cursor: move;
-            user-select: none;
-        }
-        
-        .draggable-element:hover {
-            outline: 2px solid rgba(77,255,160,0.5);
-            outline-offset: 2px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Overlay Designer - StreamStudio</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0A0D14;
+  color: #DCE6F8;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Top Bar */
+.top-bar {
+  background: #0F1420;
+  border-bottom: 1px solid #1F2A3E;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 48px;
+}
+
+.top-bar h1 {
+  font-size: 13px;
+  font-family: 'Space Mono', monospace;
+  color: #4DFFA0;
+  white-space: nowrap;
+}
+
+.top-bar input {
+  padding: 6px 10px;
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  color: #DCE6F8;
+  border-radius: 6px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-btn {
+  padding: 6px 10px;
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  color: #DCE6F8;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tool-btn:hover, .tool-btn:active {
+  background: #4DFFA0;
+  color: #0A0D14;
+  border-color: #4DFFA0;
+}
+
+.tool-btn.danger {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.tool-btn.danger:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.tool-btn.success {
+  background: #4DFFA0;
+  color: #0A0D14;
+  border-color: #4DFFA0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.desktop-toggles {
+  display: flex;
+  gap: 8px;
+}
+
+/* Main Layout */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Desktop Panels */
+.panel {
+  width: 260px;
+  background: #0F1420;
+  border-right: 1px solid #1F2A3E;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.22s;
+}
+
+.panel.collapsed {
+  width: 0;
+}
+
+.panel-inner {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.props-panel {
+  width: 300px;
+  background: #0F1420;
+  border-left: 1px solid #1F2A3E;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.22s;
+}
+
+.props-panel.collapsed {
+  width: 0;
+}
+
+.props-inner {
+  width: 300px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* Sections */
+.section-title {
+  font-size: 9px;
+  font-family: 'Space Mono', monospace;
+  color: #6A7A9A;
+  letter-spacing: 1px;
+  padding: 10px 12px 6px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #1F2A3E;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.section-close {
+  background: none;
+  border: none;
+  color: #6A7A9A;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.section-close:hover {
+  color: #ef4444;
+}
+
+.elements-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.element-item {
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 6px;
+}
+
+.element-item:hover {
+  border-color: #4DFFA0;
+}
+
+.element-item.selected {
+  border-color: #4DFFA0;
+  background: #1F2A3E;
+}
+
+.element-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.element-icon {
+  font-size: 14px;
+}
+
+.element-name {
+  flex: 1;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.element-badge {
+  font-size: 9px;
+  background: #1F3020;
+  color: #4DFFA0;
+  border: 1px solid #2A4A30;
+  border-radius: 3px;
+  padding: 1px 4px;
+  white-space: nowrap;
+}
+
+.element-delete {
+  background: none;
+  border: none;
+  color: #6A7A9A;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.element-delete:hover {
+  color: #ef4444;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6A7A9A;
+  padding: 30px 12px;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+/* Canvas Area */
+.canvas-area {
+  flex: 1;
+  background: #07090F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.canvas-wrapper {
+  position: relative;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+
+#canvas {
+  position: relative;
+  width: 1920px;
+  height: 1080px;
+  background: transparent;
+  overflow: hidden;
+  transform-origin: top left;
+}
+
+#canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(45deg, #1a1a2e 25%, transparent 25%),
+                    linear-gradient(-45deg, #1a1a2e 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #1a1a2e 75%),
+                    linear-gradient(-45deg, transparent 75%, #1a1a2e 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.canvas-layer {
+  position: absolute;
+  inset: 0;
+}
+
+#layer-shapes, #layer-images, #layer-text, #layer-social {
+  pointer-events: auto;
+}
+
+/* Transform Controls */
+#transform-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10000;
+}
+
+.transform-box {
+  position: absolute;
+  border: 2px solid #4DFFA0;
+  background: rgba(77,255,160,0.04);
+  pointer-events: none;
+}
+
+.transform-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #4DFFA0;
+  border: 2px solid #0A0D14;
+  border-radius: 50%;
+  pointer-events: auto;
+  z-index: 10001;
+}
+
+.transform-rotate {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: #4D9FFF;
+  border: 2px solid #0A0D14;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 10001;
+}
+
+.transform-rotate:active {
+  cursor: grabbing;
+}
+
+.transform-delete {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  background: #ef4444;
+  border: 2px solid #0A0D14;
+  border-radius: 50%;
+  pointer-events: auto;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #fff;
+  font-weight: bold;
+  z-index: 10001;
+}
+
+/* Properties */
+.prop-group {
+  padding: 8px 12px;
+  border-bottom: 1px solid #1F2A3E;
+}
+
+.prop-label {
+  font-size: 9px;
+  font-family: 'Space Mono', monospace;
+  color: #6A7A9A;
+  margin-bottom: 4px;
+  display: block;
+  text-transform: uppercase;
+}
+
+.prop-input, .prop-select {
+  width: 100%;
+  padding: 5px 8px;
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  color: #DCE6F8;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.prop-input:focus, .prop-select:focus {
+  outline: none;
+  border-color: #4DFFA0;
+}
+
+.prop-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.color-input {
+  width: 100%;
+  height: 28px;
+  padding: 2px;
+  border-radius: 4px;
+  border: 1px solid #1F2A3E;
+  background: #1A2232;
+  cursor: pointer;
+}
+
+.props-section-hdr {
+  font-size: 9px;
+  font-family: 'Space Mono', monospace;
+  color: #4DFFA0;
+  letter-spacing: 1px;
+  padding: 10px 12px 4px;
+  text-transform: uppercase;
+  background: #111928;
+  border-bottom: 1px solid #1F2A3E;
+  border-top: 1px solid #1F2A3E;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.anim-preview-btn {
+  padding: 6px 10px;
+  background: #1A2232;
+  border: 1px solid #4DFFA0;
+  color: #4DFFA0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  width: 100%;
+  margin-top: 6px;
+  transition: all 0.15s;
+}
+
+.anim-preview-btn:hover {
+  background: #4DFFA0;
+  color: #0A0D14;
+}
+
+.anim-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.anim-card {
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  border-radius: 6px;
+  padding: 8px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: #6A7A9A;
+}
+
+.anim-card:hover {
+  border-color: #4DFFA0;
+  color: #4DFFA0;
+}
+
+.anim-card.selected {
+  border-color: #4DFFA0;
+  background: #1F2A3E;
+  color: #4DFFA0;
+}
+
+.anim-card .anim-icon {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.anim-card .anim-name {
+  font-size: 9px;
+}
+
+/* Modal */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 20000;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-content {
+  background: #0F1420;
+  border: 1px solid #1F2A3E;
+  border-radius: 10px;
+  width: 400px;
+  max-width: 92vw;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #1F2A3E;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.modal-body {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.element-option {
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.element-option:hover, .element-option:active {
+  border-color: #4DFFA0;
+  transform: translateY(-2px);
+}
+
+.element-option .emoji {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.element-option .name {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4DFFA0;
+  color: #0A0D14;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  z-index: 30000;
+  display: none;
+  max-width: 88vw;
+  text-align: center;
+}
+
+.toast.error {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Draggable Elements */
+.draggable-element {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.draggable-element:hover {
+  outline: 1px solid rgba(77,255,160,0.4);
+  outline-offset: 1px;
+}
+
+/* Mobile */
+.mobile-bar {
+  display: none;
+  background: #0F1420;
+  border-top: 1px solid #1F2A3E;
+  padding: 8px 10px;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.mob-btn {
+  flex: 1;
+  padding: 9px 2px;
+  background: #1A2232;
+  border: 1px solid #1F2A3E;
+  color: #DCE6F8;
+  border-radius: 8px;
+  font-size: 9px;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  text-align: center;
+}
+
+.mob-btn:active, .mob-btn.active {
+  background: #4DFFA0;
+  color: #0A0D14;
+  border-color: #4DFFA0;
+}
+
+.mob-btn.save {
+  background: #4DFFA0;
+  color: #0A0D14;
+  border-color: #4DFFA0;
+}
+
+.drawer {
+  display: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 600;
+  transition: transform 0.25s ease;
+  overflow: hidden;
+}
+
+.drawer-left {
+  left: 0;
+  width: 260px;
+  transform: translateX(-100%);
+}
+
+.drawer-right {
+  right: 0;
+  width: 300px;
+  transform: translateX(100%);
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-backdrop {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 599;
+}
+
+.drawer-backdrop.show {
+  display: block;
+}
+
+.drawer-inner {
+  background: #0F1420;
+  border: 1px solid #1F2A3E;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer-left .drawer-inner {
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+}
+
+.drawer-right .drawer-inner {
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+}
+
+.drawer-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1A2232;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4DFFA0;
+  border-radius: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .panel, .props-panel, .desktop-toggles {
+    display: none !important;
+  }
+  .mobile-bar {
+    display: flex;
+  }
+  .drawer {
+    display: block;
+  }
+}
+</style>
 </head>
 <body>
-
 <div class="app">
-    <!-- Left Panel -->
-    <div class="panel">
-        <div class="panel-header">
-            <h1>🎨 Overlay Designer</h1>
-            <input type="text" id="designName" placeholder="Design Name (e.g., 'Lower Third - Green')">
-            <textarea id="designDesc" placeholder="Description (optional)"></textarea>
-        </div>
-        
-        <div class="toolbar">
-            <button class="tool-btn" onclick="openAddModal()">+ Add Element</button>
-            <button class="tool-btn danger" id="clearCanvasBtn">🗑 Clear All</button>
-            <button class="tool-btn success" id="newDesignBtn">✨ New Design</button>
-        </div>
-        
-        <div class="elements-section">
-            <div class="section-title">📦 Elements</div>
-            <div id="elementsList" class="elements-list">
-                <div class="empty-state">✨ Click "New Design" to start<br>or press "Add Element"</div>
-            </div>
-        </div>
-        
-        <div id="propertiesPanel" class="properties-panel">
-            <div class="section-title">⚙️ Properties</div>
-            <div id="propertiesContent"></div>
-        </div>
+  <div class="top-bar">
+    <h1>🎨 Overlay Designer</h1>
+    <input type="text" id="designName" placeholder="Design name...">
+    <button class="tool-btn" onclick="openAddModal()">+ Add</button>
+    <button class="tool-btn danger" onclick="clearCanvas()">🗑 Clear</button>
+    <button class="tool-btn" onclick="newDesign()">✨ New</button>
+    <div class="spacer"></div>
+    <div class="desktop-toggles">
+      <button class="tool-btn" onclick="toggleDesktopPanel('left')">☰ Layers</button>
+      <button class="tool-btn" onclick="toggleDesktopPanel('right')">⚙ Props</button>
+      <button class="tool-btn success" onclick="saveDesign()">💾 Save</button>
     </div>
-    
-    <!-- Canvas Area -->
-    <div class="canvas-area">
-        <div class="canvas-wrapper" id="canvasWrapper">
-            <div id="canvas">
-                <div id="layer-shapes" class="canvas-layer"></div>
-                <div id="layer-images" class="canvas-layer"></div>
-                <div id="layer-text" class="canvas-layer"></div>
-                <div id="layer-social" class="canvas-layer"></div>
-                <div id="transform-container"></div>
-            </div>
-        </div>
-    </div>
-</div>
+  </div>
 
-<!-- Bottom Bar -->
-<div class="bottom-bar">
-    <button class="save-btn new-btn" id="newDesignBtn2">✨ New Design</button>
-    <button class="save-btn" id="saveDesignBtn">💾 Save Overlay</button>
+  <div class="main">
+    <!-- Left Panel - Layers -->
+    <div class="panel" id="leftPanel">
+      <div class="panel-inner">
+        <div class="section-title">📦 Layers</div>
+        <div id="elementsListDesktop" class="elements-list">
+          <div class="empty-state">Click "+ Add"<br>to start</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas-area" id="canvasArea">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <div id="canvas">
+          <div id="layer-shapes" class="canvas-layer"></div>
+          <div id="layer-images" class="canvas-layer"></div>
+          <div id="layer-text" class="canvas-layer"></div>
+          <div id="layer-social" class="canvas-layer"></div>
+          <div id="transform-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel - Properties -->
+    <div class="props-panel" id="rightPanel">
+      <div class="props-inner">
+        <div class="section-title">⚙️ Properties</div>
+        <div id="propertiesContentDesktop">
+          <div class="empty-state" style="padding:20px 12px">Select an element</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Drawers -->
+    <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeAllDrawers()"></div>
+    <div class="drawer drawer-left" id="drawerLeft">
+      <div class="drawer-inner">
+        <div class="section-title">📦 Layers <button class="section-close" onclick="closeDrawer('left')">✕</button></div>
+        <div class="drawer-scroll"><div id="elementsListMobile" class="elements-list"></div></div>
+      </div>
+    </div>
+    <div class="drawer drawer-right" id="drawerRight">
+      <div class="drawer-inner">
+        <div class="section-title">⚙️ Properties <button class="section-close" onclick="closeDrawer('right')">✕</button></div>
+        <div class="drawer-scroll"><div id="propertiesContentMobile"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Bar -->
+  <div class="mobile-bar">
+    <button class="mob-btn" id="mobLayersBtn" onclick="toggleMobileDrawer('left')">☰<br>Layers</button>
+    <button class="mob-btn" onclick="openAddModal()">+<br>Add</button>
+    <button class="mob-btn" id="mobPropsBtn" onclick="toggleMobileDrawer('right')">⚙<br>Props</button>
+    <button class="mob-btn" onclick="clearCanvas()">🗑<br>Clear</button>
+    <button class="mob-btn save" onclick="saveDesign()">💾<br>Save</button>
+  </div>
 </div>
 
 <div id="toast" class="toast"></div>
 
 <!-- Add Element Modal -->
 <div id="addModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Add Element</h3>
-            <button onclick="closeAddModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
-        </div>
-        <div class="modal-body">
-            <div class="element-option" onclick="addShapeMenu()">
-                <div class="emoji">🔷</div>
-                <div class="name">Shape</div>
-            </div>
-            <div class="element-option" onclick="addElement('image')">
-                <div class="emoji">🖼️</div>
-                <div class="name">Image</div>
-            </div>
-            <div class="element-option" onclick="addElement('gif')">
-                <div class="emoji">🎬</div>
-                <div class="name">GIF</div>
-            </div>
-            <div class="element-option" onclick="addElement('video')">
-                <div class="emoji">📹</div>
-                <div class="name">Video</div>
-            </div>
-            <div class="element-option" onclick="addElement('text')">
-                <div class="emoji">📝</div>
-                <div class="name">Text</div>
-            </div>
-            <div class="element-option" onclick="addElement('social')">
-                <div class="emoji">💬</div>
-                <div class="name">Social Badge</div>
-            </div>
-        </div>
+  <div class="modal-content">
+    <div class="modal-header">
+      Add Element
+      <button onclick="closeAddModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✕</button>
     </div>
-</div>
-
-<!-- Shape Modal -->
-<div id="shapeModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Add Shape</h3>
-            <button onclick="closeShapeModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
-        </div>
-        <div class="modal-body">
-            <div class="element-option" onclick="addShape('rectangle')">
-                <div class="emoji">📐</div>
-                <div class="name">Rectangle</div>
-                <div style="font-size:10px;color:#6A7A9A;">Customizable corner radius</div>
-            </div>
-            <div class="element-option" onclick="addShape('circle')">
-                <div class="emoji">⚪</div>
-                <div class="name">Circle</div>
-            </div>
-            <div class="element-option" onclick="addShape('line')">
-                <div class="emoji">━━</div>
-                <div class="name">Line</div>
-            </div>
-        </div>
+    <div class="modal-body">
+      <div class="element-option" onclick="addShape('rectangle')"><div class="emoji">▬</div><div class="name">Rectangle</div></div>
+      <div class="element-option" onclick="addShape('circle')"><div class="emoji">⬤</div><div class="name">Circle</div></div>
+      <div class="element-option" onclick="addShape('line')"><div class="emoji">━</div><div class="name">Line</div></div>
+      <div class="element-option" onclick="addElement('image')"><div class="emoji">🖼️</div><div class="name">Image</div></div>
+      <div class="element-option" onclick="addElement('text')"><div class="emoji">T</div><div class="name">Text</div></div>
+      <div class="element-option" onclick="addElement('social')"><div class="emoji">💬</div><div class="name">Social Badge</div></div>
     </div>
-</div>
-
-<!-- Overwrite Confirmation Modal -->
-<div id="overwriteModal" class="modal">
-    <div class="modal-content" style="width:400px;">
-        <div class="modal-header">
-            <h3>⚠️ Design Exists</h3>
-            <button onclick="closeOverwriteModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
-        </div>
-        <div class="modal-body" style="display:block;">
-            <p id="overwriteMessage" style="margin-bottom:20px;">A design with this name already exists.</p>
-            <div style="display:flex;gap:10px;">
-                <button class="tool-btn" style="flex:1;" onclick="closeOverwriteModal()">Cancel</button>
-                <button class="tool-btn success" style="flex:1;" id="confirmOverwriteBtn">Overwrite</button>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
 
 <script>
-    // ============================================
-    // STATE MANAGEMENT
-    // ============================================
-    
-    let state = {
-        name: '',
-        description: '',
-        elements: [],
-        nextId: 1,
-        existingDesignId: null  // For overwrite
-    };
-    
-    let selectedElementId = null;
-    let isDragging = false;
-    let isRotating = false;
-    let isResizing = false;
-    let dragStart = { x: 0, y: 0 };
-    let elementStart = { x: 0, y: 0, width: 0, height: 0, rotation: 0 };
-    let resizeCorner = null;
-    
-    const CANVAS_W = 1080;
-    const CANVAS_H = 1920;
-    
-    // ============================================
-    // ELEMENT TEMPLATES
-    // ============================================
-    
-    const templates = {
-        rectangle: {
-            type: 'shape',
-            shapeType: 'rectangle',
-            width: 150,
-            height: 100,
-            borderRadius: 0,
-            color: '#4DFFA0',
-            x: CANVAS_W / 2 - 75,
-            y: CANVAS_H / 2 - 50,
-            zIndex: 10,
-            opacity: 100,
-            animation: 'none',
-            animationDuration: 0.5,
-            rotation: 0
-        },
-        circle: {
-            type: 'shape',
-            shapeType: 'circle',
-            size: 80,
-            color: '#4D9FFF',
-            x: CANVAS_W / 2 - 40,
-            y: CANVAS_H / 2 - 40,
-            zIndex: 10,
-            opacity: 100,
-            animation: 'none',
-            rotation: 0
-        },
-        line: {
-            type: 'shape',
-            shapeType: 'line',
-            width: 150,
-            thickness: 3,
-            color: '#FFFFFF',
-            x: CANVAS_W / 2 - 75,
-            y: CANVAS_H / 2,
-            rotation: 0,
-            zIndex: 10,
-            opacity: 100
-        },
-        image: {
-            type: 'image',
-            src: 'https://placehold.co/400x300/4DFFA0/0A0D14?text=Image',
-            width: 200,
-            height: 'auto',
-            borderRadius: 0,
-            objectFit: 'contain',
-            x: CANVAS_W / 2 - 100,
-            y: CANVAS_H / 2 - 150,
-            zIndex: 10,
-            opacity: 100,
-            animation: 'none'
-        },
-        gif: {
-            type: 'gif',
-            src: 'https://media.giphy.com/media/3o7abB06u9bNzA8LC8/giphy.gif',
-            width: 200,
-            height: 'auto',
-            objectFit: 'contain',
-            x: CANVAS_W / 2 - 100,
-            y: CANVAS_H / 2 - 150,
-            zIndex: 10,
-            opacity: 100,
-            loop: true
-        },
-        video: {
-            type: 'video',
-            src: 'https://www.w3schools.com/html/mov_bbb.mp4',
-            width: 320,
-            height: 180,
-            borderRadius: 0,
-            objectFit: 'cover',
-            x: CANVAS_W / 2 - 160,
-            y: CANVAS_H / 2 - 90,
-            zIndex: 10,
-            opacity: 100,
-            loop: true
-        },
-        text: {
-            type: 'text',
-            content: 'New Text',
-            fontSize: 36,
-            fontWeight: 'bold',
-            color: '#FFFFFF',
-            fontFamily: 'DM Sans, sans-serif',
-            textAlign: 'center',
-            textShadow: 'none',
-            bgColor: 'transparent',
-            padding: 0,
-            borderRadius: 0,
-            maxWidth: 400,
-            x: CANVAS_W / 2 - 200,
-            y: CANVAS_H / 2 - 18,
-            zIndex: 10,
-            opacity: 100,
-            animation: 'none'
-        },
-        social: {
-            type: 'social',
-            platform: 'youtube',
-            username: 'streamstudio',
-            showLiveBadge: true,
-            bgColor: 'rgba(0,0,0,0.7)',
-            textColor: '#FFFFFF',
-            fontSize: 14,
-            fontWeight: 'bold',
-            iconSize: 24,
-            padding: '8px 16px',
-            borderRadius: 50,
-            x: CANVAS_W / 2 - 100,
-            y: CANVAS_H - 100,
-            zIndex: 10,
-            opacity: 100,
-            animation: 'none'
-        }
-    };
-    
-    // ============================================
-    // RENDER FUNCTIONS
-    // ============================================
-    
-    function renderCanvas() {
-        // Clear layers
-        document.getElementById('layer-shapes').innerHTML = '';
-        document.getElementById('layer-images').innerHTML = '';
-        document.getElementById('layer-text').innerHTML = '';
-        document.getElementById('layer-social').innerHTML = '';
-        
-        // Render each element
-        state.elements.forEach(el => {
-            const elementDiv = createElementDOM(el);
-            if (elementDiv) {
-                const layer = getLayerForType(el.type);
-                if (layer) layer.appendChild(elementDiv);
-            }
-        });
-        
-        renderElementsList();
-        if (selectedElementId) {
-            updateTransformControls();
-        } else {
-            hideTransformControls();
-        }
+// Animation keyframes
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `
+    @keyframes ov-fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes ov-fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    @keyframes ov-slideUp { from { transform: translateY(80px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes ov-slideDown { from { transform: translateY(-80px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes ov-slideLeft { from { transform: translateX(120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes ov-slideRight { from { transform: translateX(-120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes ov-zoomIn { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes ov-zoomOut { from { transform: scale(1.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes ov-bounceIn { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.1); } 80% { transform: scale(0.95); } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes ov-flipX { from { transform: rotateX(90deg); opacity: 0; } to { transform: rotateX(0); opacity: 1; } }
+    @keyframes ov-flipY { from { transform: rotateY(90deg); opacity: 0; } to { transform: rotateY(0); opacity: 1; } }
+    @keyframes ov-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+    @keyframes ov-shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-12px); } 40% { transform: translateX(12px); } 60% { transform: translateX(-8px); } 80% { transform: translateX(8px); } }
+    @keyframes ov-swing { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(8deg); } 75% { transform: rotate(-8deg); } }
+    @keyframes ov-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-18px); } }
+    @keyframes ov-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes ov-typewriter { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0% 0 0); } }
+    @keyframes ov-glitch { 0%, 100% { transform: translate(0); } 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-2px, -4px); } 80% { transform: translate(2px, 4px); } }
+    @keyframes ov-flicker { 0%, 100% { opacity: 1; } 10% { opacity: 0.1; } 30% { opacity: 1; } 50% { opacity: 0.3; } 70% { opacity: 1; } 90% { opacity: 0.2; } }
+    @keyframes ov-rollIn { from { transform: translateX(-200px) rotate(-120deg); opacity: 0; } to { transform: translateX(0) rotate(0); opacity: 1; } }
+    @keyframes ov-dropIn { 0% { transform: translateY(-200px) rotate(10deg); opacity: 0; } 70% { transform: translateY(12px) rotate(-2deg); } 100% { transform: translateY(0) rotate(0); opacity: 1; } }
+  `;
+  document.head.appendChild(s);
+})();
+
+const ANIMS = [
+  { id: 'none', label: 'None', icon: '⊘', loop: false },
+  { id: 'fadeIn', label: 'Fade In', icon: '✨', loop: false },
+  { id: 'fadeOut', label: 'Fade Out', icon: '🌫️', loop: false },
+  { id: 'slideUp', label: 'Slide Up', icon: '⬆️', loop: false },
+  { id: 'slideDown', label: 'Slide Down', icon: '⬇️', loop: false },
+  { id: 'slideLeft', label: 'Slide Left', icon: '⬅️', loop: false },
+  { id: 'slideRight', label: 'Slide Right', icon: '➡️', loop: false },
+  { id: 'zoomIn', label: 'Zoom In', icon: '🔍', loop: false },
+  { id: 'zoomOut', label: 'Zoom Out', icon: '🔎', loop: false },
+  { id: 'bounceIn', label: 'Bounce In', icon: '🏀', loop: false },
+  { id: 'flipX', label: 'Flip X', icon: '↕️', loop: false },
+  { id: 'flipY', label: 'Flip Y', icon: '↔️', loop: false },
+  { id: 'pulse', label: 'Pulse', icon: '💗', loop: true },
+  { id: 'shake', label: 'Shake', icon: '📳', loop: false },
+  { id: 'swing', label: 'Swing', icon: '🎵', loop: true },
+  { id: 'float', label: 'Float', icon: '🎈', loop: true },
+  { id: 'spin', label: 'Spin', icon: '🌀', loop: true },
+  { id: 'typewriter', label: 'Typewriter', icon: '⌨️', loop: false },
+  { id: 'glitch', label: 'Glitch', icon: '⚡', loop: false },
+  { id: 'flicker', label: 'Flicker', icon: '💡', loop: true },
+  { id: 'rollIn', label: 'Roll In', icon: '🎲', loop: false },
+  { id: 'dropIn', label: 'Drop In', icon: '💧', loop: false }
+];
+
+const CANVAS_W = 1920, CANVAS_H = 1080;
+let state = { elements: [], nextId: 1 };
+let selectedId = null, canvasScale = 1, dragState = null;
+
+function scaleCanvas() {
+  const area = document.getElementById('canvasArea');
+  if (!area) return;
+  const scaleX = (area.clientWidth - 16) / CANVAS_W;
+  const scaleY = (area.clientHeight - 16) / CANVAS_H;
+  canvasScale = Math.min(scaleX, scaleY, 1);
+  document.getElementById('canvas').style.transform = `scale(${canvasScale})`;
+  document.getElementById('canvasWrapper').style.width = (CANVAS_W * canvasScale) + 'px';
+  document.getElementById('canvasWrapper').style.height = (CANVAS_H * canvasScale) + 'px';
+}
+
+window.addEventListener('resize', scaleCanvas);
+setTimeout(scaleCanvas, 100);
+
+const TEMPLATES = {
+  rectangle: { type: 'shape', shapeType: 'rectangle', width: 300, height: 120, borderRadius: 0, color: '#4DFFA0', x: CANVAS_W/2-150, y: CANVAS_H/2-60, zIndex: 10, opacity: 100, rotation: 0, animation: 'none', animDuration: 0.6, animDelay: 0, animEasing: 'ease-out' },
+  circle: { type: 'shape', shapeType: 'circle', size: 100, color: '#4D9FFF', x: CANVAS_W/2-50, y: CANVAS_H/2-50, zIndex: 10, opacity: 100, rotation: 0, animation: 'none', animDuration: 0.6, animDelay: 0, animEasing: 'ease-out' },
+  line: { type: 'shape', shapeType: 'line', width: 300, thickness: 4, color: '#FFFFFF', x: CANVAS_W/2-150, y: CANVAS_H/2, zIndex: 10, opacity: 100, rotation: 0, animation: 'none', animDuration: 0.6, animDelay: 0, animEasing: 'ease-out' },
+  image: { type: 'image', src: 'https://placehold.co/400x225/4DFFA0/0A0D14?text=Image', width: 400, borderRadius: 0, x: CANVAS_W/2-200, y: CANVAS_H/2-112, zIndex: 10, opacity: 100, animation: 'none', animDuration: 0.6, animDelay: 0, animEasing: 'ease-out' },
+  text: { type: 'text', content: 'New Text', fontSize: 60, fontWeight: 'bold', color: '#FFFFFF', fontFamily: 'DM Sans,sans-serif', textAlign: 'left', textShadow: 'none', bgColor: 'transparent', padding: 0, borderRadius: 0, maxWidth: 600, x: CANVAS_W/2-300, y: CANVAS_H/2-40, zIndex: 10, opacity: 100, rotation: 0, animation: 'none', animDuration: 0.6, animDelay: 0, animEasing: 'ease-out' },
+  social: { type: 'social', platform: 'youtube', username: 'streamstudio', showLiveBadge: true, bgColor: 'rgba(0,0,0,0.75)', textColor: '#FFFFFF', fontSize: 22, iconSize: 32, padding: '10px 20px', borderRadius: 50, x: 80, y: CANVAS_H-130, zIndex: 10, opacity: 100, animation: 'none', animDuration: 0.6, animDelay: 0, animEasing: 'ease-out' }
+};
+
+function buildAnimCSS(el) {
+  if (!el.animation || el.animation === 'none') return '';
+  const meta = ANIMS.find(a => a.id === el.animation) || { loop: false };
+  const iter = meta.loop ? 'infinite' : '1';
+  const fill = meta.loop ? 'none' : 'both';
+  return `ov-${el.animation} ${el.animDuration || 0.6}s ${el.animEasing || 'ease-out'} ${el.animDelay || 0}s ${iter} ${fill}`;
+}
+
+function renderCanvas() {
+  const layers = ['layer-shapes', 'layer-images', 'layer-text', 'layer-social'];
+  layers.forEach(id => document.getElementById(id).innerHTML = '');
+  
+  state.elements.forEach(el => {
+    const div = makeDOM(el);
+    if (!div) return;
+    const layerMap = { shape: 'layer-shapes', image: 'layer-images', text: 'layer-text', social: 'layer-social' };
+    document.getElementById(layerMap[el.type]).appendChild(div);
+  });
+  
+  renderLists();
+  selectedId ? updateTransform() : hideTransform();
+}
+
+function makeDOM(el) {
+  const div = document.createElement('div');
+  div.className = 'draggable-element';
+  div.dataset.id = el.id;
+  div.style.cssText = `position:absolute;transform:translate(${el.x}px,${el.y}px) rotate(${el.rotation||0}deg);z-index:${el.zIndex};opacity:${(el.opacity||100)/100};`;
+  
+  const anim = buildAnimCSS(el);
+  if (anim) div.style.animation = anim;
+  
+  if (el.type === 'shape') {
+    if (el.shapeType === 'rectangle') {
+      div.style.width = el.width + 'px';
+      div.style.height = el.height + 'px';
+      div.style.background = el.color;
+      div.style.borderRadius = el.borderRadius + 'px';
+    } else if (el.shapeType === 'circle') {
+      div.style.width = el.size + 'px';
+      div.style.height = el.size + 'px';
+      div.style.background = el.color;
+      div.style.borderRadius = '50%';
+    } else if (el.shapeType === 'line') {
+      div.style.width = el.width + 'px';
+      div.style.height = el.thickness + 'px';
+      div.style.background = el.color;
+      div.style.borderRadius = (el.thickness / 2) + 'px';
     }
-    
-    function getLayerForType(type) {
-        if (type === 'shape') return document.getElementById('layer-shapes');
-        if (type === 'image' || type === 'gif' || type === 'video') return document.getElementById('layer-images');
-        if (type === 'text') return document.getElementById('layer-text');
-        if (type === 'social') return document.getElementById('layer-social');
-        return null;
+  } else if (el.type === 'image') {
+    const img = document.createElement('img');
+    img.src = el.src;
+    img.crossOrigin = 'anonymous';
+    img.style.cssText = `width:${el.width}px;height:auto;border-radius:${el.borderRadius||0}px;display:block;`;
+    div.appendChild(img);
+  } else if (el.type === 'text') {
+    div.textContent = el.content;
+    const shadows = { soft: '2px 2px 8px rgba(0,0,0,0.4)', hard: '2px 2px 0 rgba(0,0,0,0.9)', glow: `0 0 20px ${el.color}` };
+    div.style.color = el.color;
+    div.style.fontSize = el.fontSize + 'px';
+    div.style.fontWeight = el.fontWeight;
+    div.style.fontFamily = el.fontFamily;
+    div.style.textAlign = el.textAlign;
+    div.style.maxWidth = el.maxWidth + 'px';
+    div.style.background = el.bgColor;
+    div.style.padding = el.padding + 'px';
+    div.style.borderRadius = el.borderRadius + 'px';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.textShadow = shadows[el.textShadow] || 'none';
+  } else if (el.type === 'social') {
+    const icons = { youtube: '▶', twitch: '◉', tiktok: '♪', instagram: '◎', twitter: '𝕏', facebook: 'f' };
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:${el.iconSize}px">${icons[el.platform] || '◈'}</span>
+      <span style="color:${el.textColor};font-size:${el.fontSize}px;font-weight:bold">@${el.username}</span>
+      ${el.showLiveBadge ? '<span style="color:#ff4444;font-size:13px;background:rgba(255,68,68,0.2);padding:2px 8px;border-radius:20px">LIVE</span>' : ''}
+    </div>`;
+    div.style.background = el.bgColor;
+    div.style.padding = el.padding;
+    div.style.borderRadius = el.borderRadius + 'px';
+    div.style.display = 'inline-block';
+  }
+  
+  div.addEventListener('mousedown', e => { e.stopPropagation(); selectEl(el.id); startDrag(e, el.id); });
+  div.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); selectEl(el.id); startDragTouch(e, el.id); }, { passive: false });
+  return div;
+}
+
+function renderLists() {
+  const icons = { shape: '🔷', image: '🖼️', text: '📝', social: '💬' };
+  const html = state.elements.length ? [...state.elements].reverse().map(el => {
+    const hasAnim = el.animation && el.animation !== 'none';
+    return `<div class="element-item ${selectedId === el.id ? 'selected' : ''}" onclick="selectEl(${el.id})">
+      <div class="element-header">
+        <span class="element-icon">${icons[el.type] || '📦'}</span>
+        <span class="element-name">${getElName(el)}</span>
+        ${hasAnim ? `<span class="element-badge">▶ ${el.animation}</span>` : ''}
+        <button class="element-delete" onclick="event.stopPropagation();deleteEl(${el.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state">No elements yet<br>Click "+ Add"</div>';
+  
+  document.getElementById('elementsListDesktop').innerHTML = html;
+  document.getElementById('elementsListMobile').innerHTML = html;
+}
+
+function getElName(el) {
+  if (el.type === 'shape') return el.shapeType[0].toUpperCase() + el.shapeType.slice(1);
+  if (el.type === 'text') return 'Text: ' + (el.content || '').substring(0, 14);
+  if (el.type === 'social') return el.platform + ' @' + el.username;
+  return el.type[0].toUpperCase() + el.type.slice(1);
+}
+
+function updateTransform() {
+  const el = state.elements.find(e => e.id === selectedId);
+  if (!el) return;
+  const elDiv = document.querySelector(`.draggable-element[data-id="${selectedId}"]`);
+  if (!elDiv) return;
+  const rect = elDiv.getBoundingClientRect();
+  const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+  const left = (rect.left - canvasRect.left) / canvasScale;
+  const top = (rect.top - canvasRect.top) / canvasScale;
+  const width = rect.width / canvasScale;
+  const height = rect.height / canvasScale;
+  
+  const tc = document.getElementById('transform-container');
+  tc.innerHTML = `
+    <div class="transform-box" style="left:${left-2}px;top:${top-2}px;width:${width+4}px;height:${height+4}px;"></div>
+    <div class="transform-handle" data-h="nw" style="left:${left-5}px;top:${top-5}px;cursor:nw-resize"></div>
+    <div class="transform-handle" data-h="n" style="left:${left+width/2-5}px;top:${top-5}px;cursor:n-resize"></div>
+    <div class="transform-handle" data-h="ne" style="left:${left+width-5}px;top:${top-5}px;cursor:ne-resize"></div>
+    <div class="transform-handle" data-h="e" style="left:${left+width-5}px;top:${top+height/2-5}px;cursor:e-resize"></div>
+    <div class="transform-handle" data-h="se" style="left:${left+width-5}px;top:${top+height-5}px;cursor:se-resize"></div>
+    <div class="transform-handle" data-h="s" style="left:${left+width/2-5}px;top:${top+height-5}px;cursor:s-resize"></div>
+    <div class="transform-handle" data-h="sw" style="left:${left-5}px;top:${top+height-5}px;cursor:sw-resize"></div>
+    <div class="transform-handle" data-h="w" style="left:${left-5}px;top:${top+height/2-5}px;cursor:w-resize"></div>
+    <div class="transform-rotate" style="left:${left+width/2-11}px;top:${top-32}px">↻</div>
+    <div class="transform-delete" style="left:${left+width+6}px;top:${top-11}px">✕</div>
+  `;
+  
+  tc.querySelectorAll('.transform-handle').forEach(h => h.addEventListener('mousedown', e => { e.stopPropagation(); startResize(e, h.dataset.h); }));
+  tc.querySelector('.transform-rotate')?.addEventListener('mousedown', e => { e.stopPropagation(); startRotate(e); });
+  tc.querySelector('.transform-delete')?.addEventListener('click', e => { e.stopPropagation(); deleteEl(selectedId); });
+}
+
+function hideTransform() { document.getElementById('transform-container').innerHTML = ''; }
+
+function startDrag(e, id) {
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return;
+  dragState = { mode: 'drag', id, sx: e.clientX, sy: e.clientY, ex: el.x, ey: el.y };
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function startDragTouch(e, id) {
+  const t = e.touches[0];
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return;
+  dragState = { mode: 'drag', id, sx: t.clientX, sy: t.clientY, ex: el.x, ey: el.y };
+  document.addEventListener('touchmove', onTouchMove, { passive: false });
+  document.addEventListener('touchend', onTouchEnd);
+}
+
+function startResize(e, corner) {
+  const el = state.elements.find(e => e.id === selectedId);
+  if (!el) return;
+  dragState = { mode: 'resize', corner, sx: e.clientX, sy: e.clientY, sw: el.width || el.size || 200, sh: el.height || el.size || 100, startX: el.x, startY: el.y, sfs: el.fontSize || 60 };
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function startRotate(e) {
+  const el = state.elements.find(e => e.id === selectedId);
+  if (!el) return;
+  dragState = { mode: 'rotate', sx: e.clientX, srot: el.rotation || 0 };
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function onMouseMove(e) { handleDrag(e.clientX, e.clientY); }
+function onTouchMove(e) { e.preventDefault(); handleDrag(e.touches[0].clientX, e.touches[0].clientY); }
+function onMouseUp() { dragState = null; document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); }
+function onTouchEnd() { dragState = null; document.removeEventListener('touchmove', onTouchMove); document.removeEventListener('touchend', onTouchEnd); }
+
+function handleDrag(cx, cy) {
+  if (!dragState) return;
+  const dx = cx - dragState.sx, dy = cy - dragState.sy;
+  
+  if (dragState.mode === 'drag') {
+    const el = state.elements.find(e => e.id === dragState.id);
+    if (el) {
+      el.x = dragState.ex + dx / canvasScale;
+      el.y = dragState.ey + dy / canvasScale;
     }
+  } else if (dragState.mode === 'resize') {
+    const el = state.elements.find(e => e.id === selectedId);
+    if (!el) return;
+    const sdx = dx / canvasScale, sdy = dy / canvasScale;
+    const corner = dragState.corner;
     
-    function createElementDOM(el) {
-        const div = document.createElement('div');
-        div.className = 'draggable-element';
-        div.setAttribute('data-id', el.id);
-        div.style.position = 'absolute';
-        
-        // Apply transforms
-        let transform = `translate(${el.x}px, ${el.y}px)`;
-        if (el.rotation) {
-            transform += ` rotate(${el.rotation}deg)`;
-        }
-        div.style.transform = transform;
-        div.style.zIndex = el.zIndex;
-        div.style.opacity = (el.opacity || 100) / 100;
-        
-        // Animation
-        if (el.animation && el.animation !== 'none') {
-            div.style.animation = `${el.animation} ${el.animationDuration || 0.5}s ease-out both`;
-        }
-        
-        addAnimationStyles();
-        
-        // Content based on type
-        if (el.type === 'shape') {
-            if (el.shapeType === 'rectangle') {
-                div.style.width = `${el.width}px`;
-                div.style.height = `${el.height}px`;
-                div.style.background = el.color;
-                div.style.borderRadius = `${el.borderRadius}px`;
-            } else if (el.shapeType === 'circle') {
-                div.style.width = `${el.size}px`;
-                div.style.height = `${el.size}px`;
-                div.style.background = el.color;
-                div.style.borderRadius = '50%';
-            } else if (el.shapeType === 'line') {
-                div.style.width = `${el.width}px`;
-                div.style.height = `${el.thickness}px`;
-                div.style.background = el.color;
-                div.style.borderRadius = `${el.thickness / 2}px`;
-            }
-        } else if (el.type === 'image' || el.type === 'gif') {
-            const img = document.createElement('img');
-            img.src = el.src;
-            img.crossOrigin = 'anonymous';
-            img.style.width = typeof el.width === 'number' ? `${el.width}px` : el.width;
-            img.style.height = typeof el.height === 'number' ? `${el.height}px` : el.height;
-            img.style.objectFit = el.objectFit;
-            img.style.borderRadius = `${el.borderRadius || 0}px`;
-            img.style.display = 'block';
-            div.appendChild(img);
-            div.style.width = 'auto';
-            div.style.height = 'auto';
-        } else if (el.type === 'video') {
-            const video = document.createElement('video');
-            video.src = el.src;
-            video.autoplay = true;
-            video.loop = el.loop !== false;
-            video.muted = true;
-            video.playsInline = true;
-            video.style.width = `${el.width}px`;
-            video.style.height = `${el.height}px`;
-            video.style.objectFit = el.objectFit;
-            video.style.borderRadius = `${el.borderRadius || 0}px`;
-            div.appendChild(video);
-        } else if (el.type === 'text') {
-            div.textContent = el.content;
-            div.style.color = el.color;
-            div.style.fontSize = `${el.fontSize}px`;
-            div.style.fontWeight = el.fontWeight;
-            div.style.fontFamily = el.fontFamily;
-            div.style.textAlign = el.textAlign;
-            div.style.maxWidth = `${el.maxWidth}px`;
-            div.style.background = el.bgColor;
-            div.style.padding = `${el.padding}px`;
-            div.style.borderRadius = `${el.borderRadius}px`;
-            
-            const shadowMap = {
-                none: 'none',
-                soft: '2px 2px 8px rgba(0,0,0,0.3)',
-                hard: '2px 2px 0px rgba(0,0,0,0.8)',
-                glow: `0 0 15px ${el.color}`
-            };
-            div.style.textShadow = shadowMap[el.textShadow] || 'none';
-            div.style.whiteSpace = 'pre-wrap';
-        } else if (el.type === 'social') {
-            const socialIcons = {
-                youtube: '▶️',
-                twitch: '🎮',
-                tiktok: '🎵',
-                instagram: '📷',
-                twitter: '🐦',
-                facebook: '👍',
-                discord: '💬'
-            };
-            div.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: ${el.iconSize}px;">${socialIcons[el.platform] || '💬'}</span>
-                    <span style="color: ${el.textColor}; font-size: ${el.fontSize}px; font-weight: ${el.fontWeight};">@${el.username}</span>
-                    ${el.showLiveBadge ? '<span style="color: #ff4444; font-size: 12px; background: rgba(255,68,68,0.2); padding: 2px 8px; border-radius: 20px;">LIVE</span>' : ''}
-                </div>
-            `;
-            div.style.background = el.bgColor;
-            div.style.padding = el.padding;
-            div.style.borderRadius = `${el.borderRadius}px`;
-            div.style.display = 'inline-block';
-        }
-        
-        // Add click handler for selection
-        div.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            selectElement(el.id);
-            startDrag(e, el.id);
-        });
-        
-        return div;
+    if (el.type === 'shape' && el.shapeType === 'rectangle') {
+      if (corner.includes('e')) el.width = Math.max(20, dragState.sw + sdx);
+      if (corner.includes('w')) { el.width = Math.max(20, dragState.sw - sdx); el.x = dragState.startX + sdx; }
+      if (corner.includes('s')) el.height = Math.max(10, dragState.sh + sdy);
+      if (corner.includes('n')) { el.height = Math.max(10, dragState.sh - sdy); el.y = dragState.startY + sdy; }
+    } else if (el.type === 'shape' && el.shapeType === 'circle') {
+      el.size = Math.max(20, dragState.sw + (sdx + sdy) / 2);
+    } else if (el.type === 'text') {
+      el.fontSize = Math.max(10, Math.min(300, dragState.sfs + (sdx + sdy) / 2));
+    } else if (el.type === 'image') {
+      el.width = Math.max(40, dragState.sw + sdx);
     }
-    
-    function addAnimationStyles() {
-        if (!document.getElementById('animation-styles')) {
-            const style = document.createElement('style');
-            style.id = 'animation-styles';
-            style.textContent = `
-                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-                @keyframes slideLeft { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-                @keyframes slideRight { from { transform: translateX(-100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-                @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-                @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                @keyframes zoomIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-                @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-15px); } }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-    
-    function renderElementsList() {
-        const container = document.getElementById('elementsList');
-        if (state.elements.length === 0) {
-            container.innerHTML = '<div class="empty-state">✨ No elements yet<br>Click "Add Element" to start</div>';
-            return;
-        }
-        
-        container.innerHTML = state.elements.map(el => `
-            <div class="element-item ${selectedElementId === el.id ? 'selected' : ''}" onclick="selectElement(${el.id})">
-                <div class="element-header">
-                    <span class="element-icon">${getElementIcon(el)}</span>
-                    <span class="element-name">${getElementName(el)}</span>
-                    <button class="element-delete" onclick="event.stopPropagation(); deleteElement(${el.id})">🗑</button>
-                </div>
-                <div class="element-preview">${getElementPreview(el)}</div>
-            </div>
-        `).join('');
-    }
-    
-    function getElementIcon(el) {
-        const icons = {
-            shape: '🔷',
-            image: '🖼️',
-            gif: '🎬',
-            video: '📹',
-            text: '📝',
-            social: '💬'
-        };
-        return icons[el.type] || '📦';
-    }
-    
-    function getElementName(el) {
-        if (el.type === 'shape') {
-            const shapes = { rectangle: 'Rectangle', circle: 'Circle', line: 'Line' };
-            return shapes[el.shapeType] || 'Shape';
-        }
-        if (el.type === 'text') return 'Text: ' + (el.content.substring(0, 20) || '...');
-        if (el.type === 'social') return `${el.platform} @${el.username}`;
-        return el.type.charAt(0).toUpperCase() + el.type.slice(1);
-    }
-    
-    function getElementPreview(el) {
-        if (el.type === 'text') return el.content.substring(0, 30);
-        if (el.type === 'social') return `${el.platform}: @${el.username}`;
-        if (el.type === 'image' || el.type === 'gif') return el.src.substring(0, 40);
-        return '';
-    }
-    
-    // ============================================
-    // TRANSFORM CONTROLS
-    // ============================================
-    
-    let transformContainer = null;
-    
-    function updateTransformControls() {
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (!el) return;
-        
-        if (!transformContainer) {
-            transformContainer = document.getElementById('transform-container');
-        }
-        
-        const elementDiv = document.querySelector(`.draggable-element[data-id="${selectedElementId}"]`);
-        if (!elementDiv) return;
-        
-        const rect = elementDiv.getBoundingClientRect();
-        const canvasRect = document.getElementById('canvas').getBoundingClientRect();
-        
-        const left = rect.left - canvasRect.left;
-        const top = rect.top - canvasRect.top;
-        const width = rect.width;
-        const height = rect.height;
-        
-        transformContainer.innerHTML = `
-            <div class="transform-box" style="left: ${left-2}px; top: ${top-2}px; width: ${width+4}px; height: ${height+4}px;"></div>
-            <div class="transform-handle" data-handle="nw" style="left: ${left-6}px; top: ${top-6}px;"></div>
-            <div class="transform-handle" data-handle="n" style="left: ${left + width/2 - 6}px; top: ${top-6}px;"></div>
-            <div class="transform-handle" data-handle="ne" style="left: ${left + width - 6}px; top: ${top-6}px;"></div>
-            <div class="transform-handle" data-handle="e" style="left: ${left + width - 6}px; top: ${top + height/2 - 6}px;"></div>
-            <div class="transform-handle" data-handle="se" style="left: ${left + width - 6}px; top: ${top + height - 6}px;"></div>
-            <div class="transform-handle" data-handle="s" style="left: ${left + width/2 - 6}px; top: ${top + height - 6}px;"></div>
-            <div class="transform-handle" data-handle="sw" style="left: ${left-6}px; top: ${top + height - 6}px;"></div>
-            <div class="transform-handle" data-handle="w" style="left: ${left-6}px; top: ${top + height/2 - 6}px;"></div>
-            <div class="transform-rotate" style="left: ${left + width/2 - 12}px; top: ${top - 35}px;">↻</div>
-            <div class="transform-delete" style="left: ${left + width + 10}px; top: ${top - 15}px;">✕</div>
-        `;
-        
-        document.querySelectorAll('.transform-handle').forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
-                e.stopPropagation();
-                startResize(e, handle.dataset.handle);
-            });
-        });
-        
-        document.querySelector('.transform-rotate')?.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            startRotate(e);
-        });
-        
-        document.querySelector('.transform-delete')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            deleteElement(selectedElementId);
-        });
-    }
-    
-    function hideTransformControls() {
-        if (transformContainer) {
-            transformContainer.innerHTML = '';
-        }
-    }
-    
-    function startDrag(e, elementId) {
-        isDragging = true;
-        dragStart = { x: e.clientX, y: e.clientY };
-        const el = state.elements.find(e => e.id === elementId);
-        if (el) {
-            elementStart = { x: el.x, y: el.y };
-        }
-        
-        document.addEventListener('mousemove', onDrag);
-        document.addEventListener('mouseup', stopDrag);
-    }
-    
-    function onDrag(e) {
-        if (!isDragging || selectedElementId === null) return;
-        
-        const dx = e.clientX - dragStart.x;
-        const dy = e.clientY - dragStart.y;
-        
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (el) {
-            el.x = elementStart.x + dx;
-            el.y = elementStart.y + dy;
-            renderCanvas();
-        }
-    }
-    
-    function stopDrag() {
-        isDragging = false;
-        document.removeEventListener('mousemove', onDrag);
-        document.removeEventListener('mouseup', stopDrag);
-    }
-    
-    function startResize(e, corner) {
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (!el) return;
-        
-        isResizing = true;
-        resizeCorner = corner;
-        dragStart = { x: e.clientX, y: e.clientY };
-        
-        if (el.type === 'shape' && el.shapeType === 'rectangle') {
-            elementStart = { width: el.width, height: el.height, x: el.x, y: el.y };
-        } else if (el.type === 'text') {
-            elementStart = { fontSize: el.fontSize, x: el.x, y: el.y };
-        } else if (el.type === 'image' || el.type === 'gif' || el.type === 'video') {
-            elementStart = { width: el.width, x: el.x, y: el.y };
-        }
-        
-        document.addEventListener('mousemove', onResize);
-        document.addEventListener('mouseup', stopResize);
-    }
-    
-    function onResize(e) {
-        if (!isResizing) return;
-        
-        const dx = e.clientX - dragStart.x;
-        const dy = e.clientY - dragStart.y;
-        const delta = (dx + dy) / 2;
-        
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (!el) return;
-        
-        if (el.type === 'shape' && el.shapeType === 'rectangle') {
-            if (resizeCorner.includes('e')) el.width = Math.max(20, elementStart.width + dx);
-            if (resizeCorner.includes('w')) {
-                el.width = Math.max(20, elementStart.width - dx);
-                el.x = elementStart.x + dx;
-            }
-            if (resizeCorner.includes('s')) el.height = Math.max(20, elementStart.height + dy);
-            if (resizeCorner.includes('n')) {
-                el.height = Math.max(20, elementStart.height - dy);
-                el.y = elementStart.y + dy;
-            }
-        } else if (el.type === 'text') {
-            el.fontSize = Math.max(8, Math.min(200, elementStart.fontSize + delta));
-        } else if (el.type === 'image' || el.type === 'gif' || el.type === 'video') {
-            el.width = Math.max(40, (elementStart.width || 200) + delta);
-        }
-        
-        renderCanvas();
-    }
-    
-    function stopResize() {
-        isResizing = false;
-        document.removeEventListener('mousemove', onResize);
-        document.removeEventListener('mouseup', stopResize);
-    }
-    
-    function startRotate(e) {
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (!el) return;
-        
-        isRotating = true;
-        dragStart = { x: e.clientX, y: e.clientY };
-        elementStart = { rotation: el.rotation || 0 };
-        
-        document.addEventListener('mousemove', onRotate);
-        document.addEventListener('mouseup', stopRotate);
-    }
-    
-    function onRotate(e) {
-        if (!isRotating) return;
-        
-        const dx = e.clientX - dragStart.x;
-        const rotation = elementStart.rotation + dx * 0.5;
-        
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (el) {
-            el.rotation = rotation % 360;
-            renderCanvas();
-        }
-    }
-    
-    function stopRotate() {
-        isRotating = false;
-        document.removeEventListener('mousemove', onRotate);
-        document.removeEventListener('mouseup', stopRotate);
-    }
-    
-    // ============================================
-    // ELEMENT MANAGEMENT
-    // ============================================
-    
-    function addElement(type) {
-        const template = { ...templates[type], id: state.nextId++ };
-        state.elements.push(template);
-        selectElement(template.id);
-        renderCanvas();
-        closeAddModal();
-        showToast(`Added ${type} element`);
-    }
-    
-    function addShapeMenu() {
-        closeAddModal();
-        document.getElementById('shapeModal').classList.add('show');
-    }
-    
-    function addShape(shapeType) {
-        const template = { ...templates[shapeType], id: state.nextId++ };
-        state.elements.push(template);
-        selectElement(template.id);
-        renderCanvas();
-        closeShapeModal();
-        showToast(`Added ${shapeType}`);
-    }
-    
-    function selectElement(id) {
-        selectedElementId = id;
-        renderCanvas();
-        showPropertiesPanel(id);
-    }
-    
-    function deleteElement(id) {
-        state.elements = state.elements.filter(e => e.id !== id);
-        if (selectedElementId === id) {
-            selectedElementId = null;
-            hideTransformControls();
-            document.getElementById('propertiesPanel').classList.remove('show');
-        }
-        renderCanvas();
-        showToast('Element deleted');
-    }
-    
-    function clearCanvas() {
-        if (confirm('Clear all elements? This cannot be undone.')) {
-            state.elements = [];
-            selectedElementId = null;
-            renderCanvas();
-            showToast('Canvas cleared');
-        }
-    }
-    
-    function newDesign() {
-        if (state.elements.length > 0) {
-            if (confirm('Start a new design? Current design will be lost if not saved.')) {
-                resetDesign();
-            }
-        } else {
-            resetDesign();
-        }
-    }
-    
-    function resetDesign() {
-        state.elements = [];
-        state.nextId = 1;
-        state.existingDesignId = null;
-        selectedElementId = null;
-        document.getElementById('designName').value = '';
-        document.getElementById('designDesc').value = '';
-        document.getElementById('propertiesPanel').classList.remove('show');
-        renderCanvas();
-        showToast('New design ready');
-    }
-    
-    // ============================================
-    // PROPERTIES PANEL
-    // ============================================
-    
-    function showPropertiesPanel(id) {
-        const el = state.elements.find(e => e.id === id);
-        if (!el) return;
-        
-        const panel = document.getElementById('propertiesPanel');
-        const content = document.getElementById('propertiesContent');
-        
-        panel.classList.add('show');
-        
-        let html = `
-            <div class="prop-group">
-                <label class="prop-label">Position X</label>
-                <input type="number" class="prop-input" id="prop_x" value="${Math.round(el.x)}" onchange="updateElementProp('x', parseInt(this.value))">
-            </div>
-            <div class="prop-group">
-                <label class="prop-label">Position Y</label>
-                <input type="number" class="prop-input" id="prop_y" value="${Math.round(el.y)}" onchange="updateElementProp('y', parseInt(this.value))">
-            </div>
-            <div class="prop-group">
-                <label class="prop-label">Opacity (%)</label>
-                <input type="range" min="0" max="100" value="${el.opacity || 100}" onchange="updateElementProp('opacity', parseInt(this.value))">
-            </div>
-            <div class="prop-group">
-                <label class="prop-label">Animation</label>
-                <select class="prop-select" onchange="updateElementProp('animation', this.value)">
-                    <option value="none" ${el.animation === 'none' ? 'selected' : ''}>None</option>
-                    <option value="fadeIn" ${el.animation === 'fadeIn' ? 'selected' : ''}>Fade In</option>
-                    <option value="slideUp" ${el.animation === 'slideUp' ? 'selected' : ''}>Slide Up</option>
-                    <option value="slideLeft" ${el.animation === 'slideLeft' ? 'selected' : ''}>Slide Left</option>
-                    <option value="pulse" ${el.animation === 'pulse' ? 'selected' : ''}>Pulse</option>
-                    <option value="bounce" ${el.animation === 'bounce' ? 'selected' : ''}>Bounce</option>
-                    <option value="zoomIn" ${el.animation === 'zoomIn' ? 'selected' : ''}>Zoom In</option>
-                </select>
-            </div>
-        `;
-        
-        // Rectangle shape properties (customizable)
-        if (el.type === 'shape' && el.shapeType === 'rectangle') {
-            html += `
-                <div class="prop-group">
-                    <label class="prop-label">Width (px)</label>
-                    <input type="number" class="prop-input" value="${el.width}" onchange="updateElementProp('width', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Height (px)</label>
-                    <input type="number" class="prop-input" value="${el.height}" onchange="updateElementProp('height', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Border Radius (px)</label>
-                    <input type="number" class="prop-input" value="${el.borderRadius || 0}" onchange="updateElementProp('borderRadius', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Color</label>
-                    <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                </div>
-            `;
-        }
-        
-        if (el.type === 'shape' && el.shapeType === 'circle') {
-            html += `
-                <div class="prop-group">
-                    <label class="prop-label">Size (px)</label>
-                    <input type="number" class="prop-input" value="${el.size}" onchange="updateElementProp('size', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Color</label>
-                    <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                </div>
-            `;
-        }
-        
-        if (el.type === 'shape' && el.shapeType === 'line') {
-            html += `
-                <div class="prop-group">
-                    <label class="prop-label">Length (px)</label>
-                    <input type="number" class="prop-input" value="${el.width}" onchange="updateElementProp('width', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Thickness (px)</label>
-                    <input type="number" class="prop-input" value="${el.thickness}" onchange="updateElementProp('thickness', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Rotation (°)</label>
-                    <input type="number" class="prop-input" value="${el.rotation || 0}" onchange="updateElementProp('rotation', parseInt(this.value))">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Color</label>
-                    <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                </div>
-            `;
-        }
-        
-        if (el.type === 'text') {
-            html += `
-                <div class="prop-group">
-                    <label class="prop-label">Content</label>
-                    <textarea class="prop-input" rows="3" onchange="updateElementProp('content', this.value)">${el.content}</textarea>
-                </div>
-                <div class="prop-row">
-                    <div class="prop-group">
-                        <label class="prop-label">Font Size (px)</label>
-                        <input type="number" class="prop-input" value="${el.fontSize}" onchange="updateElementProp('fontSize', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Color</label>
-                        <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                    </div>
-                </div>
-                <div class="prop-row">
-                    <div class="prop-group">
-                        <label class="prop-label">Font Weight</label>
-                        <select class="prop-select" onchange="updateElementProp('fontWeight', this.value)">
-                            <option value="normal" ${el.fontWeight === 'normal' ? 'selected' : ''}>Normal</option>
-                            <option value="bold" ${el.fontWeight === 'bold' ? 'selected' : ''}>Bold</option>
-                            <option value="bolder" ${el.fontWeight === 'bolder' ? 'selected' : ''}>Bolder</option>
-                        </select>
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Text Align</label>
-                        <select class="prop-select" onchange="updateElementProp('textAlign', this.value)">
-                            <option value="left" ${el.textAlign === 'left' ? 'selected' : ''}>Left</option>
-                            <option value="center" ${el.textAlign === 'center' ? 'selected' : ''}>Center</option>
-                            <option value="right" ${el.textAlign === 'right' ? 'selected' : ''}>Right</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Background Color</label>
-                    <input type="color" class="color-input" value="${el.bgColor}" onchange="updateElementProp('bgColor', this.value)">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Text Shadow</label>
-                    <select class="prop-select" onchange="updateElementProp('textShadow', this.value)">
-                        <option value="none" ${el.textShadow === 'none' ? 'selected' : ''}>None</option>
-                        <option value="soft" ${el.textShadow === 'soft' ? 'selected' : ''}>Soft</option>
-                        <option value="hard" ${el.textShadow === 'hard' ? 'selected' : ''}>Hard</option>
-                        <option value="glow" ${el.textShadow === 'glow' ? 'selected' : ''}>Glow</option>
-                    </select>
-                </div>
-            `;
-        }
-        
-        if (el.type === 'image' || el.type === 'gif') {
-            html += `
-                <div class="prop-group">
-                    <label class="prop-label">URL</label>
-                    <input type="url" class="prop-input" value="${el.src}" onchange="updateElementProp('src', this.value)">
-                </div>
-                <div class="prop-row">
-                    <div class="prop-group">
-                        <label class="prop-label">Width (px)</label>
-                        <input type="number" class="prop-input" value="${typeof el.width === 'number' ? el.width : 200}" onchange="updateElementProp('width', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Border Radius</label>
-                        <input type="number" class="prop-input" value="${el.borderRadius || 0}" onchange="updateElementProp('borderRadius', parseInt(this.value))">
-                    </div>
-                </div>
-            `;
-        }
-        
-        if (el.type === 'social') {
-            html += `
-                <div class="prop-group">
-                    <label class="prop-label">Platform</label>
-                    <select class="prop-select" onchange="updateElementProp('platform', this.value); showPropertiesPanel(selectedElementId)">
-                        <option value="youtube" ${el.platform === 'youtube' ? 'selected' : ''}>YouTube</option>
-                        <option value="twitch" ${el.platform === 'twitch' ? 'selected' : ''}>Twitch</option>
-                        <option value="tiktok" ${el.platform === 'tiktok' ? 'selected' : ''}>TikTok</option>
-                        <option value="instagram" ${el.platform === 'instagram' ? 'selected' : ''}>Instagram</option>
-                        <option value="twitter" ${el.platform === 'twitter' ? 'selected' : ''}>Twitter/X</option>
-                        <option value="facebook" ${el.platform === 'facebook' ? 'selected' : ''}>Facebook</option>
-                    </select>
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Username</label>
-                    <input type="text" class="prop-input" value="${el.username}" onchange="updateElementProp('username', this.value)">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Background Color</label>
-                    <input type="color" class="color-input" value="${el.bgColor}" onchange="updateElementProp('bgColor', this.value)">
-                </div>
-                <div class="prop-group">
-                    <label class="prop-label">Live Badge</label>
-                    <select class="prop-select" onchange="updateElementProp('showLiveBadge', this.value === 'true')">
-                        <option value="true" ${el.showLiveBadge ? 'selected' : ''}>Show</option>
-                        <option value="false" ${!el.showLiveBadge ? 'selected' : ''}>Hide</option>
-                    </select>
-                </div>
-            `;
-        }
-        
-        content.innerHTML = html;
-    }
-    
-    window.updateElementProp = function(prop, value) {
-        const el = state.elements.find(e => e.id === selectedElementId);
-        if (el) {
-            el[prop] = value;
-            renderCanvas();
-            if (prop === 'platform') {
-                showPropertiesPanel(selectedElementId);
-            }
-        }
-    };
-    
-    // ============================================
-    // SAVE FUNCTION with OVERWRITE
-    // ============================================
-    
-    let pendingSave = null;
-    
-    async function saveDesign() {
-        const name = document.getElementById('designName').value.trim();
-        if (!name) {
-            showToast('Please enter a design name', 'error');
-            return;
-        }
-        
-        const designData = {
-            name: name,
-            description: document.getElementById('designDesc').value,
-            design_json: {
-                elements: state.elements,
-                width: CANVAS_W,
-                height: CANVAS_H,
-                background: 'transparent'
-            }
-        };
-        
-        showToast('Checking for existing design...');
-        
-        try {
-            // Check if name exists
-            const checkResponse = await fetch(`/api/overlay/check-name?name=${encodeURIComponent(name)}`);
-            const existing = await checkResponse.json();
-            
-            if (existing.exists && existing.id) {
-                // Show overwrite confirmation
-                state.existingDesignId = existing.id;
-                document.getElementById('overwriteMessage').innerHTML = `A design named "<strong>${name}</strong>" already exists.<br><br>Do you want to overwrite it?`;
-                document.getElementById('overwriteModal').classList.add('show');
-                pendingSave = designData;
-                return;
-            }
-            
-            // No existing - save new
-            await performSave(designData);
-            
-        } catch (error) {
-            // If check fails, proceed with save
-            await performSave(designData);
-        }
-    }
-    
-    async function performSave(designData, overwriteId = null) {
-        showToast('Saving design...');
-        
-        try {
-            let url = '/api/overlay/save';
-            let method = 'POST';
-            let body = designData;
-            
-            if (overwriteId) {
-                url = `/api/overlay/update/${overwriteId}`;
-                method = 'PUT';
-                body = designData;
-            }
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(`Saved! URL: ${result.url}`);
-                await navigator.clipboard.writeText(result.url);
-                showToast(`URL copied to clipboard!\n${result.url}`);
-                
-                if (confirm('Design saved! View it now?')) {
-                    window.open(result.url, '_blank');
-                }
-            } else {
-                showToast('Error: ' + result.error, 'error');
-            }
-        } catch (error) {
-            showToast('Save failed: ' + error.message, 'error');
-        }
-    }
-    
-    window.confirmOverwrite = async function() {
-        closeOverwriteModal();
-        if (pendingSave && state.existingDesignId) {
-            await performSave(pendingSave, state.existingDesignId);
-            pendingSave = null;
-            state.existingDesignId = null;
-        }
-    };
-    
-    // ============================================
-    // HELPER FUNCTIONS
-    // ============================================
-    
-    function showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        toast.textContent = message;
-        toast.className = `toast ${type}`;
-        toast.style.display = 'block';
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 3000);
-    }
-    
-    function openAddModal() {
-        document.getElementById('addModal').classList.add('show');
-    }
-    
-    function closeAddModal() {
-        document.getElementById('addModal').classList.remove('show');
-    }
-    
-    function closeShapeModal() {
-        document.getElementById('shapeModal').classList.remove('show');
-    }
-    
-    function closeOverwriteModal() {
-        document.getElementById('overwriteModal').classList.remove('show');
-        pendingSave = null;
-        state.existingDesignId = null;
-    }
-    
-    // ============================================
-    // INITIALIZATION
-    // ============================================
-    
-    document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
-    document.getElementById('clearCanvasBtn').addEventListener('click', clearCanvas);
-    document.getElementById('newDesignBtn').addEventListener('click', newDesign);
-    document.getElementById('newDesignBtn2').addEventListener('click', newDesign);
-    document.getElementById('confirmOverwriteBtn').addEventListener('click', confirmOverwrite);
-    
-    // Empty canvas - no example, user must add elements
+  } else if (dragState.mode === 'rotate') {
+    const el = state.elements.find(e => e.id === selectedId);
+    if (el) el.rotation = (dragState.srot + dx * 0.6) % 360;
+  }
+  renderCanvas();
+}
+
+function addElement(type) {
+  const newEl = { ...TEMPLATES[type], id: state.nextId++ };
+  state.elements.push(newEl);
+  selectEl(newEl.id);
+  renderCanvas();
+  closeAddModal();
+  showToast('Added ' + type);
+}
+
+function addShape(shapeType) {
+  const newEl = { ...TEMPLATES[shapeType], id: state.nextId++ };
+  state.elements.push(newEl);
+  selectEl(newEl.id);
+  renderCanvas();
+  closeAddModal();
+  showToast('Added ' + shapeType);
+}
+
+function selectEl(id) {
+  selectedId = id;
+  renderCanvas();
+  showProperties(id);
+  if (window.innerWidth <= 768) openDrawer('right');
+}
+
+function deleteEl(id) {
+  state.elements = state.elements.filter(e => e.id !== id);
+  if (selectedId === id) {
+    selectedId = null;
+    hideTransform();
+    setPropertiesContent('<div class="empty-state" style="padding:20px 12px">Select an element</div>');
+  }
+  renderCanvas();
+  showToast('Deleted');
+}
+
+function clearCanvas() {
+  if (confirm('Clear all elements? This cannot be undone.')) {
+    state.elements = [];
+    selectedId = null;
     renderCanvas();
-    
-    // Add welcome message
-    showToast('✨ Click "Add Element" to start creating your overlay', 'success');
-    
-    // Prevent canvas click from deselecting
-    document.getElementById('canvas').addEventListener('mousedown', (e) => {
-        if (e.target === document.getElementById('canvas') || e.target.classList.contains('canvas-layer')) {
-            selectedElementId = null;
-            hideTransformControls();
-            document.getElementById('propertiesPanel').classList.remove('show');
-            renderElementsList();
-        }
-    });
-    
-    // Scale canvas
-    function scaleCanvas() {
-        const wrapper = document.getElementById('canvasWrapper');
-        const area = document.querySelector('.canvas-area');
-        const maxW = area.clientWidth - 40;
-        const maxH = area.clientHeight - 40;
-        const scaleX = maxW / CANVAS_W;
-        const scaleY = maxH / CANVAS_H;
-        const scale = Math.min(scaleX, scaleY, 1);
-        document.getElementById('canvas').style.transform = `scale(${scale})`;
-        wrapper.style.width = `${CANVAS_W * scale}px`;
-        wrapper.style.height = `${CANVAS_H * scale}px`;
-    }
-    
-    window.addEventListener('resize', scaleCanvas);
-    setTimeout(scaleCanvas, 100);
-    
-    console.log('Designer ready - Start by adding elements!');
+    showToast('Canvas cleared');
+  }
+}
+
+function newDesign() {
+  if (state.elements.length === 0 || confirm('Start a new design? Current design will be lost if not saved.')) {
+    state.elements = [];
+    state.nextId = 1;
+    selectedId = null;
+    document.getElementById('designName').value = '';
+    renderCanvas();
+    showToast('New design ready');
+  }
+}
+
+function previewAnimation(id) {
+  const elDiv = document.querySelector(`.draggable-element[data-id="${id}"]`);
+  if (!elDiv) return;
+  const el = state.elements.find(e => e.id === id);
+  if (!el || el.animation === 'none') return;
+  elDiv.style.animation = 'none';
+  elDiv.offsetHeight;
+  elDiv.style.animation = buildAnimCSS(el);
+  showToast('▶ Previewing: ' + el.animation);
+}
+
+function setPropertiesContent(html) {
+  document.getElementById('propertiesContentDesktop').innerHTML = html;
+  document.getElementById('propertiesContentMobile').innerHTML = html;
+}
+
+function showProperties(id) {
+  const el = state.elements.find(e => e.id === id);
+  if (!el) return;
+  
+  const animGrid = ANIMS.map(a => `
+    <div class="anim-card ${el.animation === a.id ? 'selected' : ''}" onclick="updateProp('animation', '${a.id}')">
+      <div class="anim-icon">${a.icon}</div>
+      <div class="anim-name">${a.label}</div>
+    </div>
+  `).join('');
+  
+  let html = `
+    <div class="props-section-hdr">📐 Transform</div>
+    <div class="prop-group prop-row">
+      <div><label class="prop-label">X</label><input type="number" class="prop-input" value="${Math.round(el.x)}" onchange="updateProp('x', parseInt(this.value))"></div>
+      <div><label class="prop-label">Y</label><input type="number" class="prop-input" value="${Math.round(el.y)}" onchange="updateProp('y', parseInt(this.value))"></div>
+    </div>
+    <div class="prop-group prop-row">
+      <div><label class="prop-label">Rotation °</label><input type="number" class="prop-input" value="${Math.round(el.rotation || 0)}" onchange="updateProp('rotation', parseInt(this.value))"></div>
+      <div><label class="prop-label">Opacity %</label><input type="range" min="0" max="100" value="${el.opacity || 100}" oninput="updateProp('opacity', parseInt(this.value))"></div>
+    </div>
+  `;
+  
+  if (el.type === 'shape' && el.shapeType === 'rectangle') {
+    html += `
+      <div class="props-section-hdr">🔷 Shape</div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Width</label><input type="number" class="prop-input" value="${el.width}" onchange="updateProp('width', parseInt(this.value))"></div>
+        <div><label class="prop-label">Height</label><input type="number" class="prop-input" value="${el.height}" onchange="updateProp('height', parseInt(this.value))"></div>
+      </div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Border Radius</label><input type="number" class="prop-input" value="${el.borderRadius || 0}" onchange="updateProp('borderRadius', parseInt(this.value))"></div>
+        <div><label class="prop-label">Color</label><input type="color" class="color-input" value="${el.color}" oninput="updateProp('color', this.value)"></div>
+      </div>
+    `;
+  }
+  
+  if (el.type === 'shape' && el.shapeType === 'circle') {
+    html += `
+      <div class="props-section-hdr">⬤ Circle</div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Size</label><input type="number" class="prop-input" value="${el.size}" onchange="updateProp('size', parseInt(this.value))"></div>
+        <div><label class="prop-label">Color</label><input type="color" class="color-input" value="${el.color}" oninput="updateProp('color', this.value)"></div>
+      </div>
+    `;
+  }
+  
+  if (el.type === 'shape' && el.shapeType === 'line') {
+    html += `
+      <div class="props-section-hdr">━ Line</div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Length</label><input type="number" class="prop-input" value="${el.width}" onchange="updateProp('width', parseInt(this.value))"></div>
+        <div><label class="prop-label">Thickness</label><input type="number" class="prop-input" value="${el.thickness}" onchange="updateProp('thickness', parseInt(this.value))"></div>
+      </div>
+      <div class="prop-group"><label class="prop-label">Color</label><input type="color" class="color-input" value="${el.color}" oninput="updateProp('color', this.value)"></div>
+    `;
+  }
+  
+  if (el.type === 'text') {
+    html += `
+      <div class="props-section-hdr">📝 Text</div>
+      <div class="prop-group"><label class="prop-label">Content</label><textarea class="prop-input" rows="3" onchange="updateProp('content', this.value)">${el.content}</textarea></div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Font Size</label><input type="number" class="prop-input" value="${el.fontSize}" onchange="updateProp('fontSize', parseInt(this.value))"></div>
+        <div><label class="prop-label">Color</label><input type="color" class="color-input" value="${el.color}" oninput="updateProp('color', this.value)"></div>
+      </div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Weight</label><select class="prop-select" onchange="updateProp('fontWeight', this.value)"><option ${el.fontWeight === 'normal' ? 'selected' : ''}>normal</option><option ${el.fontWeight === 'bold' ? 'selected' : ''}>bold</option></select></div>
+        <div><label class="prop-label">Align</label><select class="prop-select" onchange="updateProp('textAlign', this.value)"><option ${el.textAlign === 'left' ? 'selected' : ''}>left</option><option ${el.textAlign === 'center' ? 'selected' : ''}>center</option><option ${el.textAlign === 'right' ? 'selected' : ''}>right</option></select></div>
+      </div>
+      <div class="prop-group"><label class="prop-label">Shadow</label><select class="prop-select" onchange="updateProp('textShadow', this.value)"><option value="none" ${el.textShadow === 'none' ? 'selected' : ''}>None</option><option value="soft" ${el.textShadow === 'soft' ? 'selected' : ''}>Soft</option><option value="hard" ${el.textShadow === 'hard' ? 'selected' : ''}>Hard</option><option value="glow" ${el.textShadow === 'glow' ? 'selected' : ''}>Glow</option></select></div>
+    `;
+  }
+  
+  if (el.type === 'image') {
+    html += `
+      <div class="props-section-hdr">🖼️ Image</div>
+      <div class="prop-group"><label class="prop-label">URL</label><input type="url" class="prop-input" value="${el.src}" onchange="updateProp('src', this.value)"></div>
+      <div class="prop-group prop-row">
+        <div><label class="prop-label">Width</label><input type="number" class="prop-input" value="${el.width}" onchange="updateProp('width', parseInt(this.value))"></div>
+        <div><label class="prop-label">Border Radius</label><input type="number" class="prop-input" value="${el.borderRadius || 0}" onchange="updateProp('borderRadius', parseInt(this.value))"></div>
+      </div>
+    `;
+  }
+  
+  if (el.type === 'social') {
+    html += `
+      <div class="props-section-hdr">💬 Social</div>
+      <div class="prop-group"><label class="prop-label">Platform</label><select class="prop-select" onchange="updateProp('platform', this.value)"><option ${el.platform === 'youtube' ? 'selected' : ''}>youtube</option><option ${el.platform === 'twitch' ? 'selected' : ''}>twitch</option><option ${el.platform === 'tiktok' ? 'selected' : ''}>tiktok</option><option ${el.platform === 'instagram' ? 'selected' : ''}>instagram</option><option ${el.platform === 'twitter' ? 'selected' : ''}>twitter</option></select></div>
+      <div class="prop-group"><label class="prop-label">Username</label><input type="text" class="prop-input" value="${el.username}" onchange="updateProp('username', this.value)"></div>
+      <div class="prop-group"><label class="prop-label">Live Badge</label><select class="prop-select" onchange="updateProp('showLiveBadge', this.value === 'true')"><option value="true" ${el.showLiveBadge ? 'selected' : ''}>Show</option><option value="false" ${!el.showLiveBadge ? 'selected' : ''}>Hide</option></select></div>
+    `;
+  }
+  
+  html += `
+    <div class="props-section-hdr">🎬 Animation</div>
+    <div class="anim-grid">${animGrid}</div>
+    <div class="prop-group prop-row">
+      <div><label class="prop-label">Duration (s)</label><input type="number" class="prop-input" step="0.1" min="0.1" max="10" value="${el.animDuration || 0.6}" onchange="updateProp('animDuration', parseFloat(this.value))"></div>
+      <div><label class="prop-label">Delay (s)</label><input type="number" class="prop-input" step="0.1" min="0" max="10" value="${el.animDelay || 0}" onchange="updateProp('animDelay', parseFloat(this.value))"></div>
+    </div>
+    <div class="prop-group"><label class="prop-label">Easing</label>
+      <select class="prop-select" onchange="updateProp('animEasing', this.value)">
+        <option ${el.animEasing === 'ease-out' ? 'selected' : ''}>ease-out</option>
+        <option ${el.animEasing === 'ease-in' ? 'selected' : ''}>ease-in</option>
+        <option ${el.animEasing === 'ease-in-out' ? 'selected' : ''}>ease-in-out</option>
+        <option ${el.animEasing === 'linear' ? 'selected' : ''}>linear</option>
+        <option value="cubic-bezier(0.34,1.56,0.64,1)" ${el.animEasing === 'cubic-bezier(0.34,1.56,0.64,1)' ? 'selected' : ''}>spring</option>
+      </select>
+    </div>
+    <div class="prop-group">
+      <button class="anim-preview-btn" onclick="previewAnimation(${el.id})">▶ Preview Animation</button>
+    </div>
+  `;
+  
+  setPropertiesContent(html);
+}
+
+window.updateProp = function(prop, val) {
+  const el = state.elements.find(e => e.id === selectedId);
+  if (el) {
+    el[prop] = val;
+    renderCanvas();
+    if (prop === 'platform') showProperties(selectedId);
+  }
+};
+
+function toggleDesktopPanel(side) {
+  if (side === 'left') document.getElementById('leftPanel').classList.toggle('collapsed');
+  else document.getElementById('rightPanel').classList.toggle('collapsed');
+  setTimeout(scaleCanvas, 230);
+}
+
+function openDrawer(side) {
+  document.getElementById(side === 'left' ? 'drawerLeft' : 'drawerRight').classList.add('open');
+  document.getElementById('drawerBackdrop').classList.add('show');
+  document.getElementById(side === 'left' ? 'mobLayersBtn' : 'mobPropsBtn').classList.add('active');
+}
+
+function closeDrawer(side) {
+  document.getElementById(side === 'left' ? 'drawerLeft' : 'drawerRight').classList.remove('open');
+  document.getElementById('drawerBackdrop').classList.remove('show');
+  document.getElementById(side === 'left' ? 'mobLayersBtn' : 'mobPropsBtn').classList.remove('active');
+}
+
+function closeAllDrawers() { closeDrawer('left'); closeDrawer('right'); }
+function toggleMobileDrawer(side) {
+  const drawer = document.getElementById(side === 'left' ? 'drawerLeft' : 'drawerRight');
+  drawer.classList.contains('open') ? closeDrawer(side) : openDrawer(side);
+}
+
+function openAddModal() { document.getElementById('addModal').classList.add('show'); }
+function closeAddModal() { document.getElementById('addModal').classList.remove('show'); }
+
+document.getElementById('addModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeAddModal(); });
+
+function saveDesign() {
+  const name = document.getElementById('designName').value.trim();
+  if (!name) { showToast('Enter a design name', 'error'); return; }
+  const designData = { name: name, elements: state.elements, width: CANVAS_W, height: CANVAS_H };
+  const blob = new Blob([JSON.stringify(designData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name.replace(/\s+/g, '-').toLowerCase() + '.overlay.json';
+  a.click();
+  showToast('Exported: ' + name + '.overlay.json');
+}
+
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + (type === 'error' ? 'error' : '');
+  toast.style.display = 'block';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.style.display = 'none', 2600);
+}
+
+document.getElementById('canvas').addEventListener('mousedown', e => {
+  if (e.target === e.currentTarget || e.target.classList.contains('canvas-layer')) {
+    selectedId = null;
+    hideTransform();
+    renderLists();
+    setPropertiesContent('<div class="empty-state" style="padding:20px 12px">Select an element</div>');
+  }
+});
+
+renderCanvas();
+showToast('Welcome! Click "+ Add" to begin');
 </script>
 </body>
 </html>
