@@ -1106,33 +1106,33 @@ app.put('/api/overlay/update/:id', async (req, res) => {
 // ============================================
 // JS TEMPLATE ENDPOINTS FOR INJECTOR
 // ============================================
-// 
-// // Get all JS templates with placeholder info
-// app.get('/api/js-templates', async (req, res) => {
-//     try {
-//         // Read JS files from public/js directory
-//         const fs = require('fs');
-//         const jsDir = path.join(__dirname, 'public', 'js');
-//         const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
-//         
-//         const templates = files.map(file => {
-//             const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
-//             const placeholders = findPlaceholdersInJs(content);
-//             
-//             return {
-//                 id: file.replace('.js', ''),
-//                 name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-//                 filename: file,
-//                 js_code: content,
-//                 placeholders: placeholders
-//             };
-//         });
-//         
-//         res.json(templates);
-//     } catch (error) {
-//         res.status(500).json({ error: error.message });
-//     }
-// });
+
+// Get all JS templates with placeholder info
+app.get('/api/js-templates', async (req, res) => {
+    try {
+        // Read JS files from public/js directory
+        const fs = require('fs');
+        const jsDir = path.join(__dirname, 'public', 'js');
+        const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js'));
+        
+        const templates = files.map(file => {
+            const content = fs.readFileSync(path.join(jsDir, file), 'utf8');
+            const placeholders = findPlaceholdersInJs(content);
+            
+            return {
+                id: file.replace('.js', ''),
+                name: file.replace('.js', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                filename: file,
+                js_code: content,
+                placeholders: placeholders
+            };
+        });
+        
+        res.json(templates);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Helper to extract placeholders from JS code
 function findPlaceholdersInJs(jsCode) {
