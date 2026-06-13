@@ -1,11 +1,7 @@
 ###############################################
 # General
-
 logLevel: info
 logDestinations: [stdout]
-
-# Render provides the port to bind via $PORT env var.
-# mediamtx supports env var substitution.
 api: no
 
 ###############################################
@@ -16,15 +12,23 @@ rtmpAddress: :1935
 ###############################################
 # HLS - output (your phone pulls here)
 hls: yes
-hlsAddress: :8888
-hlsAllowOrigin: '*'
-hlsVariant: lowLatency
+hlsAddress: :8080
+hlsAllowOrigins: ['*']
+
+# mpegts = maximum compatibility (works with VLC, ExoPlayer, browsers)
+# lowLatency (LL-HLS) often breaks behind generic HTTP proxies like Railway's,
+# because it relies on blocking requests that proxies may buffer/timeout.
 hlsVariant: mpegts
-hlsSegmentDuration: 2s
+
+# Generate HLS continuously so the playlist is ready immediately,
+# instead of waiting for the first request (avoids 404 race on app poll).
+hlsAlwaysRemux: yes
+
 hlsSegmentCount: 5
+hlsSegmentDuration: 2s
 
 ###############################################
-# Disable unused protocols to reduce resource usage
+# Disable unused protocols
 rtsp: no
 webrtc: no
 srt: no
