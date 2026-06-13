@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Streaming</title>
+  <script src="file:///android_asset/web/socket.io.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:             #0f1117;
+      --card:           #1a1d27;
+      --surface:        #22263a;
+      --accent:         #6c63ff;
+      --accent2:        #4f46e5;
+      --text-primary:   #ffffff;
+      --text-secondary: #9094a8;
+      --border:         #2a2e42;
+      --red:            #ef4444;
+      --green:          #22c55e;
+      --yellow:         #f59e0b;
+      --blue:           #0ea5e9;
+      --pink:           #ec4899;
+    }
+
+    @media (orientation: landscape) {
+      :root {
+        --topbar-py: 5px;
+        --ctrl-py:   6px;
+        --ctrl-px:   8px;
+        --ctrl-icon: 17px;
+        --ctrl-lbl:  8px;
+        --tab-py:    6px;
+      }
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg); color: var(--text-primary);
+      font-family: 'Segoe UI', sans-serif;
+      display: flex; flex-direction: column;
+    }
+
+    /* ══════════════════════════════
+       TOP BAR
+    ══════════════════════════════ */
+    .topbar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    @media (orientation: landscape) { .topbar { padding: 5px 10px; } }
+
+    .live-pill {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--red); border-radius: 20px; padding: 4px 10px; flex-shrink: 0;
+      visibility: visible; opacity: 1; transition: opacity 0.3s;
+    }
+    .live-pill.active { visibility: visible; opacity: 1; }
+    .live-dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; animation: blink 1s infinite; opacity: 1; transition: opacity 0.3s; }
+    .live-dot.active { opacity: 1; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .live-text { font-size: 11px; font-weight: 800; color: #fff; letter-spacing: .8px; }
+
+    .duration-text {
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .topbar-gap { flex: 1; }
+
+    .viewer-wrap {
+      position: relative; display: flex; align-items: center; gap: 5px;
+      background: var(--surface); border-radius: 20px; padding: 4px 10px;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .viewer-count { font-size: 13px; font-weight: 800; }
+    .viewer-breakdown {
+      display: none; position: absolute; top: calc(100% + 6px); right: 0;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 8px 12px; min-width: 155px; z-index: 30;
+      flex-direction: column; gap: 5px;
+    }
+    .viewer-breakdown.open { display: flex; }
+    .brow { display: flex; justify-content: space-between; font-size: 11px; }
+    .brow-lbl { color: var(--text-secondary); }
+    .brow-val { font-weight: 700; }
+
+    .bitrate-badge {
+      font-size: 11px; font-weight: 700; border-radius: 20px;
+      padding: 3px 9px; flex-shrink: 0;
+      color: var(--green); background: rgba(34,197,94,.1);
+    }
+    .bitrate-badge.warn  { color: var(--yellow); background: rgba(245,158,11,.1); }
+    .bitrate-badge.bad   { color: var(--red);    background: rgba(239,68,68,.1);  }
+
+    .minimize-btn {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--surface); border: none; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .minimize-btn svg { width: 14px; height: 14px; stroke: var(--text-secondary); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ══════════════════════════════
+       BANNERS
+    ══════════════════════════════ */
+    .banner {
+      display: none; align-items: center; justify-content: space-between;
+      padding: 6px 12px; flex-shrink: 0; font-size: 12px; font-weight: 700;
+    }
+    .banner.show { display: flex; }
+    .pause-banner      { background: rgba(245,158,11,.1); border-bottom: 1px solid rgba(245,158,11,.25); color: var(--yellow); }
+    .reconnect-banner  { background: rgba(239,68,68,.08); border-bottom: 1px solid rgba(239,68,68,.25);  color: var(--red); }
+    .reconnect-action  { background: var(--red); border: none; border-radius: 14px; padding: 4px 12px; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+    /* ══════════════════════════════
+       CONTENT TABS  (Chat / Subs / Donations / Superchats)
+    ══════════════════════════════ */
+    .content-tabs {
+      display: flex; border-bottom: 1px solid var(--border);
+      background: var(--card); flex-shrink: 0;
+    }
+    .ct-tab {
+      flex: 1; padding: 10px 4px 9px; border: none; background: transparent;
+      font-size: 11px; font-weight: 700; color: var(--text-secondary);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s; letter-spacing: .3px;
+    }
+    @media (orientation: landscape) { .ct-tab { padding: 6px 4px; } }
+    .ct-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .ct-tab.t-sub   { }
+    .ct-tab.t-donor { }
+    .ct-tab.t-super { }
+
+    /* badge count on tab */
+    .ct-tab .badge {
+      display: inline-block; background: var(--accent); color: #fff;
+      font-size: 9px; font-weight: 800; border-radius: 20px;
+      padding: 1px 5px; margin-left: 4px; vertical-align: middle;
+      animation: popIn .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn { from{transform:scale(0)} to{transform:scale(1)} }
+
+    /* ══════════════════════════════
+       FEED AREA
+    ══════════════════════════════ */
+    .feed-area {
+      flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column;
+    }
+
+    .feed-panel {
+      display: none; flex: 1; flex-direction: column; overflow: hidden;
+    }
+    .feed-panel.active { display: flex; }
+
+    .feed-scroll {
+      flex: 1; overflow-y: auto; padding: 8px 12px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .feed-scroll::-webkit-scrollbar { width: 2px; }
+    .feed-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Empty state */
+    .feed-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--text-secondary); opacity: .5; gap: 8px; font-size: 13px;
+    }
+    .feed-empty-icon { font-size: 28px; }
+
+    @keyframes slideIn {
+      from { transform: translateX(-10px); opacity: 0; }
+      to   { transform: translateX(0);     opacity: 1; }
+    }
+
+    /* ── Chat message ── */
+    .chat-msg { display: flex; align-items: flex-start; gap: 7px; animation: slideIn .2s ease; }
+    .chat-av {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #fff;
+    }
+    @media (orientation: landscape) { .chat-av { width: 22px; height: 22px; font-size: 9px; } }
+    .chat-bubble {
+      background: var(--card); border-radius: 4px 10px 10px 10px;
+      padding: 6px 10px; max-width: calc(100% - 38px);
+    }
+    .chat-name { font-size: 10px; font-weight: 800; margin-bottom: 2px; }
+    .chat-text { font-size: 13px; color: rgba(255,255,255,.9); line-height: 1.4; word-break: break-word; }
+    @media (orientation: landscape) { .chat-text { font-size: 12px; } }
+    .chat-msg.mine .chat-bubble { background: rgba(108,99,255,.15); border: 1px solid rgba(108,99,255,.3); }
+    .chat-msg.mine .chat-name   { color: var(--accent); }
+    .plat {
+      display: inline-block; font-size: 9px; font-weight: 700;
+      padding: 1px 4px; border-radius: 3px; margin-left: 3px; vertical-align: middle;
+    }
+    .plat.yt { background: rgba(255,0,0,.18);    color: #ff4444; }
+    .plat.tw { background: rgba(145,70,255,.18); color: #9146ff; }
+    .plat.fb { background: rgba(24,119,242,.18); color: #1877f2; }
+
+    /* ── Event card (sub / donation / superchat) ── */
+    .ev-card {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); border-radius: 10px; padding: 10px 12px;
+      border-left: 3px solid var(--accent);
+      animation: slideIn .3s cubic-bezier(.34,1.56,.64,1);
+    }
+    .ev-card.sub    { border-left-color: var(--green); }
+    .ev-card.donor  { border-left-color: var(--red); }
+    .ev-card.super  { border-left-color: var(--yellow); }
+    .ev-icon { font-size: 20px; flex-shrink: 0; }
+    .ev-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-secondary); margin-bottom: 2px;
+    }
+    .ev-name   { font-size: 14px; font-weight: 700; }
+    .ev-amount { font-size: 13px; font-weight: 800; color: var(--yellow); margin-top: 1px; }
+    .ev-msg    { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Superchat amount badge */
+    .super-amount {
+      margin-left: auto; flex-shrink: 0;
+      font-size: 16px; font-weight: 900; color: var(--yellow);
+      background: rgba(245,158,11,.1);
+      border-radius: 8px; padding: 4px 10px;
+    }
+
+    /* ── Chat input (only shown in chat tab) ── */
+    .chat-input-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; border-top: 1px solid var(--border);
+      flex-shrink: 0; background: var(--bg);
+    }
+    .chat-input-wrap {
+      flex: 1; display: flex; align-items: center;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 7px 12px; transition: border-color .2s;
+    }
+    .chat-input-wrap:focus-within { border-color: var(--accent); }
+    .chat-input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text-primary); font-size: 13px; font-family: inherit;
+    }
+    .chat-input::placeholder { color: var(--text-secondary); }
+    .send-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: var(--accent); border: none; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .send-btn:active { background: var(--accent2); }
+    .send-btn svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ══════════════════════════════
+       INLINE PANELS (Audio + Bitrate)
+       slide in above controls row
+    ══════════════════════════════ */
+    .inline-panel {
+      display: none; flex-direction: column; gap: 14px;
+      padding: 14px 16px; background: var(--card);
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .inline-panel.open { display: flex; }
+
+    .panel-title {
+      font-size: 11px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--text-secondary); margin-bottom: -4px;
+    }
+
+    /* Sliders */
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-icon { font-size: 18px; flex-shrink: 0; width: 24px; text-align: center; }
+    .slider-lbl  { font-size: 12px; font-weight: 700; width: 36px; flex-shrink: 0; }
+    .slider-val  { font-size: 12px; font-weight: 700; color: var(--accent); width: 34px; text-align: right; flex-shrink: 0; }
+    input[type=range] {
+      flex: 1; height: 4px; -webkit-appearance: none;
+      background: var(--surface); border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px;
+      border-radius: 50%; background: var(--accent); cursor: pointer;
+    }
+
+    /* Bitrate panel */
+    .bitrate-display {
+      text-align: center; font-size: 28px; font-weight: 900; color: var(--accent);
+    }
+    .bitrate-display span { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+    input[type=range].br-slider { height: 5px; width: 100%; }
+    input[type=range].br-slider::-webkit-slider-thumb { width: 22px; height: 22px; }
+    .br-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary); margin-top: -8px; }
+    .br-presets { display: flex; gap: 7px; }
+    .br-preset {
+      flex: 1; padding: 8px 0; background: var(--surface);
+      border: 1.5px solid var(--border); border-radius: 8px;
+      color: var(--text-secondary); font-size: 11px; font-weight: 700;
+      cursor: pointer; text-align: center; transition: all .2s;
+    }
+    .br-preset.active { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,.12); }
+    .br-apply {
+      width: 100%; padding: 12px; background: var(--accent); border: none;
+      border-radius: 10px; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .br-apply:active { background: var(--accent2); }
+
+    /* ══════════════════════════════
+       CONTROLS ROW
+    ══════════════════════════════ */
+    .controls-row {
+      display: flex; align-items: center; justify-content: space-around;
+      padding: 9px 10px 11px; background: var(--bg);
+      border-top: 1px solid var(--border); flex-shrink: 0; gap: 4px;
+    }
+    @media (orientation: landscape) { .controls-row { padding: 5px 8px 7px; } }
+
+    .ctrl-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: var(--surface); border: none; border-radius: 12px;
+      padding: 9px 10px; cursor: pointer; min-width: 44px;
+      transition: background .2s, transform .1s;
+    }
+    @media (orientation: landscape) { .ctrl-btn { padding: 6px 8px; border-radius: 10px; min-width: 38px; } }
+    .ctrl-btn:active { transform: scale(.91); }
+    .ctrl-btn svg {
+      width: 20px; height: 20px; stroke: var(--text-primary); fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    @media (orientation: landscape) { .ctrl-btn svg { width: 16px; height: 16px; } }
+    .ctrl-btn .lbl {
+      font-size: 9px; font-weight: 700; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: .4px;
+    }
+    @media (orientation: landscape) { .ctrl-btn .lbl { font-size: 8px; } }
+
+    .ctrl-btn.muted   { background: rgba(239,68,68,.12); }
+    .ctrl-btn.muted svg { stroke: var(--red); }
+    .ctrl-btn.on      { background: rgba(108,99,255,.15); }
+    .ctrl-btn.on svg  { stroke: var(--accent); }
+    .ctrl-btn.paused  { background: rgba(245,158,11,.12); }
+    .ctrl-btn.paused svg { stroke: var(--yellow); }
+
+    .ctrl-btn.hidden-ctrl { display: none; }
+    .ctrl-btn.hidden-ctrl.show { display: flex; }
+
+    .end-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      background: rgba(239,68,68,.12); border: 1.5px solid rgba(239,68,68,.25);
+      border-radius: 12px; padding: 9px 11px; cursor: pointer; min-width: 44px;
+      transition: background .2s, transform .1s;
+    }
+    @media (orientation: landscape) { .end-btn { padding: 6px 8px; border-radius: 10px; min-width: 38px; } }
+    .end-btn:active { background: rgba(239,68,68,.25); transform: scale(.91); }
+    .end-btn svg {
+      width: 20px; height: 20px; stroke: var(--red); fill: none;
+      stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    @media (orientation: landscape) { .end-btn svg { width: 16px; height: 16px; } }
+    .end-btn .lbl { font-size: 9px; font-weight: 700; color: var(--red); text-transform: uppercase; }
+    @media (orientation: landscape) { .end-btn .lbl { font-size: 8px; } }
+
+    /* ══════════════════════════════
+       END CONFIRM (inline overlay)
+    ══════════════════════════════ */
+    .end-confirm {
+      display: none; position: absolute; inset: 0;
+      background: rgba(15,17,23,.95); z-index: 20;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 28px;
+    }
+    .end-confirm.show { display: flex; }
+    .end-icon  { font-size: 40px; }
+    .end-title { font-size: 20px; font-weight: 900; }
+    .end-sub   { font-size: 13px; color: var(--text-secondary); text-align: center; }
+    .end-yes   { width: 100%; padding: 15px; background: var(--red); border: none; border-radius: 12px; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .end-no    { width: 100%; padding: 13px; background: var(--surface); border: none; border-radius: 12px; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    /* Avatar palette */
+    .av-blue   { background:#2563eb } .av-green  { background:#16a34a }
+    .av-orange { background:#ea580c } .av-pink   { background:#db2777 }
+    .av-teal   { background:#0d9488 } .av-purple { background:#7c3aed }
+    .av-red    { background:#dc2626 } .av-accent { background:#6c63ff }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="live-pill" id="livePill"><div class="live-dot" id="liveDot"></div><div class="live-text">LIVE</div></div>
+ <!-- <div class="duration-text" id="durationText">00:00</div>-->
+  <div class="topbar-gap"></div>
+  <div class="viewer-wrap" onclick="toggleViewers()">
+    <span style="font-size:13px">👁</span>
+    <span class="viewer-count" id="viewerTotal">0</span>
+    <div class="viewer-breakdown" id="viewerBreakdown">
+      <div class="brow"><span class="brow-lbl">📺 YouTube</span><span class="brow-val" id="ytV">0</span></div>
+      <div class="brow"><span class="brow-lbl">🎮 Twitch</span><span class="brow-val"  id="twV">0</span></div>
+      <div class="brow"><span class="brow-lbl">📘 Facebook</span><span class="brow-val" id="fbV">0</span></div>
+    </div>
+  </div>
+  <!-- Likes -->
+  <div class="viewer-wrap" style="cursor:default; gap:4px;">
+    <span style="font-size:13px">❤️</span>
+    <span class="viewer-count" id="likeCount">0</span>
+  </div>
+  <!-- Total views -->
+  <div class="viewer-wrap" style="cursor:default; gap:4px;">
+    <span style="font-size:13px">👀</span>
+    <span class="viewer-count" id="totalViews">0</span>
+  </div>
+  <div class="bitrate-badge" id="bitrateBadge" style="display:none"></div>
+  <button class="minimize-btn" onclick="minimizeScene()">
+    <svg viewBox="0 0 24 24"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+</div>
+
+<!-- Banners -->
+<div class="banner pause-banner" id="pauseBanner"><span>⏸ BRB — Viewers see pause screen</span></div>
+<div class="banner reconnect-banner" id="reconnectBanner">
+  <span>⚠️ Connection lost</span>
+  <button class="reconnect-action" onclick="reconnectStream()">Reconnect</button>
+</div>
+
+<!-- Content Tabs -->
+<div class="content-tabs">
+  <button class="ct-tab active" id="ct-chat"  onclick="switchTab('chat')">💬 Chat</button>
+  <button class="ct-tab t-sub"  id="ct-subs"  onclick="switchTab('subs')">⭐ Subs</button>
+  <button class="ct-tab t-donor" id="ct-donor" onclick="switchTab('donor')">💰 Donations</button>
+  <button class="ct-tab t-super" id="ct-super" onclick="switchTab('super')">✨ Superchats</button>
+</div>
+
+<!-- Feed Area -->
+<div class="feed-area">
+
+  <!-- End confirm overlay -->
+  <div class="end-confirm" id="endConfirm">
+    <div class="end-icon">⏹</div>
+    <div class="end-title">End Stream?</div>
+    <div class="end-sub">Viewers will be disconnected from all platforms.</div>
+    <button class="end-yes" onclick="confirmEndStream()">End Stream</button>
+    <button class="end-no"  onclick="closeEndConfirm()">Cancel</button>
+  </div>
+
+  <!-- Chat panel -->
+  <div class="feed-panel active" id="panel-chat">
+    <div class="feed-scroll" id="scroll-chat">
+      <div class="feed-empty" id="empty-chat"><div class="feed-empty-icon">💬</div><span>Chat will appear here</span></div>
+    </div>
+    <div class="chat-input-row">
+      <div class="chat-input-wrap">
+        <input class="chat-input" id="chatInput" type="text"
+               placeholder="Send a message..." maxlength="200"
+               onkeydown="if(event.key==='Enter')sendChat()" />
+      </div>
+      <button class="send-btn" onclick="sendChat()">
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Subs panel -->
+  <div class="feed-panel" id="panel-subs">
+    <div class="feed-scroll" id="scroll-subs">
+      <div class="feed-empty" id="empty-subs"><div class="feed-empty-icon">⭐</div><span>New subscribers will appear here</span></div>
+    </div>
+  </div>
+
+  <!-- Donations panel -->
+  <div class="feed-panel" id="panel-donor">
+    <div class="feed-scroll" id="scroll-donor">
+      <div class="feed-empty" id="empty-donor"><div class="feed-empty-icon">💰</div><span>Donations will appear here</span></div>
+    </div>
+  </div>
+
+  <!-- Superchats panel -->
+  <div class="feed-panel" id="panel-super">
+    <div class="feed-scroll" id="scroll-super">
+      <div class="feed-empty" id="empty-super"><div class="feed-empty-icon">✨</div><span>Superchats will appear here</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Audio inline panel -->
+<div class="inline-panel" id="audioPanel">
+  <div class="panel-title">Audio Levels</div>
+  <div class="slider-row">
+    <div class="slider-icon">🎤</div>
+    <div class="slider-lbl">Mic</div>
+    <input type="range" id="micSlider" min="0" max="100" value="100" oninput="onMicVol(this.value)" />
+    <div class="slider-val" id="micVal">100%</div>
+  </div>
+  <div class="slider-row">
+    <div class="slider-icon">🎮</div>
+    <div class="slider-lbl">Game</div>
+    <input type="range" id="gameSlider" min="0" max="100" value="100" oninput="onGameVol(this.value)" />
+    <div class="slider-val" id="gameVal">100%</div>
+  </div>
+</div>
+
+<!-- Bitrate inline panel -->
+<div class="inline-panel" id="bitratePanel">
+  <div class="panel-title">Adjust Bitrate</div>
+  <div class="bitrate-display"><span id="brVal">3000</span> <span>kbps</span></div>
+  <input type="range" class="br-slider" id="brSlider" min="500" max="8000" step="100" value="3000"
+         oninput="onBrSlider(this.value)" />
+  <div class="br-labels"><span>500</span><span>4000</span><span>8000</span></div>
+  <div class="br-presets">
+    <div class="br-preset" onclick="brPreset(1000,this)">1 Mbps</div>
+    <div class="br-preset active" onclick="brPreset(3000,this)">3 Mbps</div>
+    <div class="br-preset" onclick="brPreset(5000,this)">5 Mbps</div>
+    <div class="br-preset" onclick="brPreset(8000,this)">8 Mbps</div>
+  </div>
+  <button class="br-apply" onclick="applyBitrate()">Apply Bitrate</button>
+</div>
+
+<!-- Controls Row -->
+<div class="controls-row">
+
+  <button class="ctrl-btn" id="micBtn" onclick="toggleMic()">
+    <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    <span class="lbl" id="micLbl">Mic</span>
+  </button>
+
+  <button class="ctrl-btn" id="camBtn" onclick="toggleCam()">
+    <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+    <span class="lbl" id="camLbl">Cam</span>
+  </button>
+
+  <button class="ctrl-btn" id="alertsBtn" onclick="toggleAlerts()">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <span class="lbl" id="alertsLbl">Alerts</span>
+  </button>
+<!--
+  <button class="ctrl-btn" id="shieldBtn" onclick="togglePause()">
+    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    <span class="lbl" id="shieldLbl">BRB</span>
+  </button> -->
+<!--
+  <button class="ctrl-btn" id="audioBtn" onclick="togglePanel('audio')">
+    <svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+    <span class="lbl">Audio</span>
+  </button>-->
+
+  <button class="ctrl-btn" id="bitrateBtn" onclick="togglePanel('bitrate')">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span class="lbl">Bitrate</span>
+  </button>
+
+  <button class="ctrl-btn hidden-ctrl" id="retryBtn" onclick="reconnectStream()">
+    <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+    <span class="lbl">Retry</span>
+  </button>
+
+  <button class="end-btn" onclick="openEndConfirm()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+    <span class="lbl">End</span>
+  </button>
+
+</div>
+
+<script>
+  // ══════════════════════════════════════════════════════════════════
+  //  CONFIGURATION
+  // ══════════════════════════════════════════════════════════════════
+  const SOURCE = {
+    yt: 'api',
+    fb: 'api',
+    tw: 'se',
+  };
+
+  const POLL = {
+    chat:    5000,
+    viewers: 15000,
+    stats:   30000,
+  };
+
+  const API = {
+    yt:  'https://lgfzoprhyjrmosvigwlb.supabase.co/functions/v1/youtube',
+    fb:  'https://lgfzoprhyjrmosvigwlb.supabase.co/functions/v1/facebook',
+    tw:  'https://lgfzoprhyjrmosvigwlb.supabase.co/functions/v1/twitch',
+  };
+
+  const EDGE_URL     = 'https://lgfzoprhyjrmosvigwlb.supabase.co/functions/v1';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZnpvcHJoeWpybW9zdmlnd2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU3OTAyNzYsImV4cCI6MjA4MTM2NjI3Nn0.VjksnOtIINpR9ugYSXP2cwvoHsm8YLbs7fr5vkV4Uxg';
+
+  // Lazy getter — reads bridge if ready, falls back to localStorage (written by profile_setup.html)
+  let _deviceUid = null;
+  function getDeviceUid() {
+    if (!_deviceUid) {
+      if (window.Android && Android.getDeviceUid) {
+        _deviceUid = Android.getDeviceUid() || '';
+      }
+      if (!_deviceUid) _deviceUid = localStorage.getItem('dev_uid') || '';
+    }
+    return _deviceUid || '';
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  STATE
+  // ══════════════════════════════════════════════════════════════════
+  let micMuted      = false;
+  let camMuted      = true;   // streaming scene always starts cam as "Hidden"
+  let isPaused      = false;
+  let isLive        = false;  // true only after onStreamStarted fires
+  let alertsOn      = true;
+  let pendingKbps   = 3000;
+  let activeTab     = 'chat';
+  let openPanel     = null;
+
+  const unread = { subs: 0, donor: 0, super: 0 };
+  const AV_COLORS = ['av-blue','av-green','av-orange','av-pink','av-teal','av-purple','av-red','av-accent'];
+  const nodes = { chat: [], subs: [], donor: [], super: [] };
+
+  let initialState = {
+    mic: false,
+    camera: true
+  };
+
+  const state = {
+    yt: {
+      liveChatId: null,
+      nextPageToken: null,
+      broadcastId: null,
+      actualStartTime: null,
+      pollTimers: { chat: null, viewers: null, stats: null },
+      seenIds: new Set(),
+      viewers: 0,
+      likes: 0,
+      totalViews: 0,
+      timerSynced: false,
+    },
+    fb: {
+      videoId: null,
+      sinceTimestamp: null,
+      pollTimers: { chat: null, viewers: null },
+      seenIds: new Set(),
+      viewers: 0
+    },
+    tw: {
+      ws: null,
+      channel: null,
+      accessToken: null,
+      connected: false,
+      reconnTimer: null,
+      viewers: 0,
+      pollTimers: { viewers: null }
+    }
+  };
+
+  const viewers = { yt: 0, fb: 0, tw: 0 };
+  let totalLikes = 0;
+  let totalViews = 0;
+  const socks = {};
+
+  let _durationStart = 0;
+  let _durationTimer = null;
+  let _timerSource = null;
+
+  // ══════════════════════════════════════════════════════════════════
+  //  CONTENT TABS
+  // ══════════════════════════════════════════════════════════════════
+  function switchTab(name) {
+    activeTab = name;
+    document.querySelectorAll('.feed-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.ct-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+    document.getElementById('ct-'   + name).classList.add('active');
+    if (unread[name] !== undefined) {
+      unread[name] = 0;
+      updateBadge(name);
+    }
+  }
+
+  function updateBadge(tab) {
+    const el  = document.getElementById('ct-' + tab);
+    const old = el.querySelector('.badge');
+    if (old) old.remove();
+    if (unread[tab] > 0) {
+      const b = document.createElement('span');
+      b.className   = 'badge';
+      b.textContent = unread[tab] > 99 ? '99+' : unread[tab];
+      el.appendChild(b);
+    }
+  }
+
+  function bumpUnread(tab) {
+    if (activeTab === tab) return;
+    unread[tab]++;
+    updateBadge(tab);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  INLINE PANELS
+  // ══════════════════════════════════════════════════════════════════
+  function togglePanel(name) {
+    const panelId = name + 'Panel';
+    const btnId   = name + 'Btn';
+
+    if (openPanel === name) {
+      document.getElementById(panelId).classList.remove('open');
+      document.getElementById(btnId).classList.remove('on');
+      openPanel = null;
+    } else {
+      if (openPanel) {
+        document.getElementById(openPanel + 'Panel').classList.remove('open');
+        document.getElementById(openPanel + 'Btn').classList.remove('on');
+      }
+      document.getElementById(panelId).classList.add('open');
+      document.getElementById(btnId).classList.add('on');
+      openPanel = name;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  DURATION
+  // ══════════════════════════════════════════════════════════════════
+  function updateDuration(totalSeconds) {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const p = n => String(n).padStart(2, '0');
+    document.getElementById('durationText').textContent =
+      h > 0 ? p(h)+':'+p(m)+':'+p(s) : p(m)+':'+p(s);
+  }
+
+  function startDurationTick(actualStartTime, source) {
+    const priority = { yt: 3, fb: 2, tw: 1 };
+    if (_timerSource && priority[source] < priority[_timerSource]) {
+      return;
+    }
+
+    stopDurationTick();
+    _durationStart = actualStartTime ? new Date(actualStartTime).getTime() : Date.now();
+    _timerSource = source;
+
+    _durationTimer = setInterval(() => {
+      updateDuration(Math.floor((Date.now() - _durationStart) / 1000));
+    }, 1000);
+  }
+
+  function stopDurationTick() {
+    if (_durationTimer) {
+      clearInterval(_durationTimer);
+      _durationTimer = null;
+    }
+    _timerSource = null; // reset so next startDurationTick always wins
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  VIEWER / LIKE / TOTAL VIEWS AGGREGATION
+  // ══════════════════════════════════════════════════════════════════
+  function updateViewers(platform, count) {
+    if (count !== undefined) {
+      viewers[platform] = count || 0;
+      state[platform].viewers = count || 0;
+    }
+
+    const total = viewers.yt + viewers.fb + viewers.tw;
+    document.getElementById('viewerTotal').textContent = total || 0;
+    document.getElementById('ytV').textContent = viewers.yt;
+    document.getElementById('fbV').textContent = viewers.fb;
+    document.getElementById('twV').textContent = viewers.tw;
+
+    notifyOverlay({ type: 'viewers', count: total || 0 });
+  }
+
+  function updateLikes(count) {
+    totalLikes = count || 0;
+    document.getElementById('likeCount').textContent = totalLikes.toLocaleString();
+  }
+
+  function updateTotalViews(count) {
+    totalViews = count || 0;
+    document.getElementById('totalViews').textContent = totalViews.toLocaleString();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  BITRATE
+  // ══════════════════════════════════════════════════════════════════
+  function updateBitrate(kbps) {
+    if (!kbps || kbps <= 0) return; // ignore zero/empty — keep badge hidden
+    const b = document.getElementById('bitrateBadge');
+    b.style.display = '';  // make visible on first real value
+    b.textContent = kbps >= 1000 ? (kbps/1000).toFixed(1)+' Mbps' : kbps+' kbps';
+    b.className   = 'bitrate-badge';
+    if      (kbps < 800)  b.classList.add('bad');
+    else if (kbps < 1500) b.classList.add('warn');
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  MIC / CAM / ALERTS / BRB
+  // ══════════════════════════════════════════════════════════════════
+  function toggleMic() {
+    micMuted = !micMuted;
+    document.getElementById('micBtn').classList.toggle('muted', micMuted);
+    document.getElementById('micLbl').textContent = micMuted ? 'Muted' : 'Mic';
+    if (window.Android && Android.toggleMic) Android.toggleMic(micMuted);
+  }
+
+  function toggleCam() {
+    camMuted = !camMuted;
+    document.getElementById('camBtn').classList.toggle('muted', camMuted);
+    document.getElementById('camLbl').textContent = camMuted ? 'Hidden' : 'Cam';
+    if (window.Android && Android.toggleCamera) Android.toggleCamera(!camMuted);
+  }
+
+  function toggleAlerts() {
+    alertsOn = !alertsOn;
+    document.getElementById('alertsBtn').classList.toggle('muted', !alertsOn);
+    document.getElementById('alertsLbl').textContent = alertsOn ? 'Alerts' : 'Muted';
+    if (window.Android && Android.toggleAlerts) Android.toggleAlerts(alertsOn);
+  }
+
+  function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('shieldBtn').classList.toggle('paused', isPaused);
+    document.getElementById('shieldLbl').textContent = isPaused ? 'Resume' : 'BRB';
+    document.getElementById('pauseBanner').classList.toggle('show', isPaused);
+    if (window.Android) {
+      if (isPaused  && Android.pauseStream)  Android.pauseStream();
+      if (!isPaused && Android.resumeStream) Android.resumeStream();
+    }
+  }
+
+  function onStreamPaused() {
+    isPaused = true;
+    document.getElementById('shieldBtn').classList.add('paused');
+    document.getElementById('shieldLbl').textContent = 'Resume';
+    document.getElementById('pauseBanner').classList.add('show');
+  }
+
+  function onStreamResumed() {
+    isPaused = false;
+    document.getElementById('shieldBtn').classList.remove('paused');
+    document.getElementById('shieldLbl').textContent = 'BRB';
+    document.getElementById('pauseBanner').classList.remove('show');
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  AUDIO SLIDERS
+  // ══════════════════════════════════════════════════════════════════
+  function onMicVol(val) {
+    document.getElementById('micVal').textContent = val + '%';
+    if (window.Android && Android.setMicVolume) Android.setMicVolume(parseInt(val));
+  }
+
+  function onGameVol(val) {
+    document.getElementById('gameVal').textContent = val + '%';
+    if (window.Android && Android.setGameVolume) Android.setGameVolume(parseInt(val));
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  BITRATE PANEL
+  // ══════════════════════════════════════════════════════════════════
+  function onBrSlider(val) {
+    pendingKbps = parseInt(val);
+    document.getElementById('brVal').textContent = pendingKbps;
+    document.querySelectorAll('.br-preset').forEach(b => b.classList.remove('active'));
+  }
+
+  function brPreset(kbps, el) {
+    pendingKbps = kbps;
+    document.getElementById('brSlider').value = kbps;
+    document.getElementById('brVal').textContent = kbps;
+    document.querySelectorAll('.br-preset').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+  }
+
+  function applyBitrate() {
+    if (window.Android && Android.setBitrate) Android.setBitrate(pendingKbps);
+    togglePanel('bitrate');
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  RECONNECT
+  // ══════════════════════════════════════════════════════════════════
+  function onConnectionLost() {
+    document.getElementById('reconnectBanner').classList.add('show');
+    document.getElementById('retryBtn').classList.add('show');
+  }
+
+  function onConnectionRestored() {
+    document.getElementById('reconnectBanner').classList.remove('show');
+    document.getElementById('retryBtn').classList.remove('show');
+  }
+
+  function reconnectStream() {
+    if (window.Android && Android.reconnectStream) Android.reconnectStream();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  END STREAM
+  // ══════════════════════════════════════════════════════════════════
+  function openEndConfirm() {
+    document.getElementById('endConfirm').classList.add('show');
+  }
+
+  function closeEndConfirm() {
+    document.getElementById('endConfirm').classList.remove('show');
+  }
+
+  function confirmEndStream() {
+    closeEndConfirm();
+    if (window.Android && Android.stopStream) Android.stopStream();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  MINIMIZE
+  // ══════════════════════════════════════════════════════════════════
+  function minimizeScene() {
+    if (window.Android && Android.minimizeStreamScene) Android.minimizeStreamScene();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  CHAT DISPLAY
+  // ══════════════════════════════════════════════════════════════════
+  function onChatMessage(name, text, platform, color) {
+    removeEmpty('chat');
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    const c = color ? '' : AV_COLORS[Math.floor(Math.random() * AV_COLORS.length)];
+    const avStyle = color ? `style="background:${color}"` : `class="chat-av ${c}"`;
+    const b = platform ? '<span class="plat '+platform+'">'+platform.toUpperCase()+'</span>' : '';
+    div.innerHTML = `<div class="chat-av" ${avStyle}>${esc(name[0].toUpperCase())}</div>
+      <div class="chat-bubble">
+        <div class="chat-name">${esc(name)}${b}</div>
+        <div class="chat-text">${esc(text)}</div>
+      </div>`;
+    appendTo('chat', div);
+    notifyOverlay({ type: 'chat', platform: platform || 'yt', name, text });
+  }
+
+  function notifyOverlay(msg) {
+    try {
+      if (window.Android && Android.postToOverlay) {
+        Android.postToOverlay(JSON.stringify(msg));
+      }
+    } catch(e) {}
+  }
+
+  function onNewSubscriber(name, platform, tier) {
+    const tierLabel = tier ? ' · ' + tier : '';
+    removeEmpty('subs');
+    const card = makeEventCard('sub', '⭐', 'New Subscriber' + tierLabel, name,
+      platform ? 'via ' + platform : '');
+    appendTo('subs', card);
+    bumpUnread('subs');
+
+    removeEmpty('chat');
+    appendTo('chat', makeEventCard('sub', '⭐', 'New Subscriber' + tierLabel, name,
+      platform ? 'via ' + platform : ''));
+
+    notifyOverlay({ type:'alert', platform: platform||'yt', alert:'subscriber', name, tier: tier||'' });
+  }
+
+  function onNewFollower(name, platform) {
+    removeEmpty('chat');
+    appendTo('chat', makeEventCard('sub', '👋', 'New Follower', name,
+      platform ? 'via ' + platform : ''));
+
+    notifyOverlay({ type:'alert', platform: platform||'yt', alert:'follow', name });
+  }
+
+  function onNewDonation(name, amount, message) {
+    removeEmpty('donor');
+    const card = makeEventCard('donor', '💰', 'Donation', name, message || '', amount);
+    appendTo('donor', card);
+    bumpUnread('donor');
+
+    removeEmpty('chat');
+    appendTo('chat', makeEventCard('donor', '💰', 'Donation · ' + amount, name, message || ''));
+
+    notifyOverlay({ type:'alert', platform:'yt', alert:'tip', name, amount, message: message||'' });
+  }
+
+  function onNewSuperchat(name, amount, message, color) {
+    removeEmpty('super');
+    const card = makeSuperchatCard(name, amount, message, color);
+    appendTo('super', card);
+    bumpUnread('super');
+
+    removeEmpty('chat');
+    appendTo('chat', makeEventCard('super', '✨', 'Superchat · ' + amount, name, message || ''));
+
+    notifyOverlay({ type:'alert', platform:'yt', alert:'superchat', name, amount, message: message||'' });
+  }
+
+  function makeEventCard(type, icon, title, name, sub, amount) {
+    const div = document.createElement('div');
+    div.className = 'ev-card ' + type;
+    div.innerHTML = `<div class="ev-icon">${icon}</div>
+      <div>
+        <div class="ev-label">${esc(title)}</div>
+        <div class="ev-name">${esc(name)}</div>
+        ${amount ? '<div class="ev-amount">'+esc(amount)+'</div>' : ''}
+        ${sub    ? '<div class="ev-msg">'+esc(sub)+'</div>'       : ''}
+      </div>`;
+    return div;
+  }
+
+  function makeSuperchatCard(name, amount, message, color) {
+    const div = document.createElement('div');
+    div.className = 'ev-card super';
+    div.style.borderLeftColor = color || 'var(--yellow)';
+    div.innerHTML = `<div class="ev-icon">✨</div>
+      <div style="flex:1">
+        <div class="ev-label">Superchat</div>
+        <div class="ev-name">${esc(name)}</div>
+        ${message ? '<div class="ev-msg">'+esc(message)+'</div>' : ''}
+      </div>
+      <div class="super-amount">${esc(amount)}</div>`;
+    return div;
+  }
+
+  function removeEmpty(tab) {
+    const e = document.getElementById('empty-' + tab);
+    if (e) e.remove();
+  }
+
+  function appendTo(tab, div) {
+    const scroll = document.getElementById('scroll-' + tab);
+    scroll.appendChild(div);
+    nodes[tab].push(div);
+    if (nodes[tab].length > 80) { nodes[tab][0].remove(); nodes[tab].shift(); }
+    if (activeTab === tab) scroll.scrollTop = scroll.scrollHeight;
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  YOUTUBE API
+  // ══════════════════════════════════════════════════════════════════
+  async function startYouTubeChat() {
+    if (!getDeviceUid()) return;
+    stopYouTubePolling();
+    state.yt.seenIds.clear();
+
+    try {
+      const res = await fetch(`${API.yt}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'get_broadcast_viewers',
+          device_uid: getDeviceUid()
+        }),
+      });
+      const data = await res.json();
+
+      if (data.broadcast_id) {
+        state.yt.broadcastId = data.broadcast_id;
+        if (data.viewers !== undefined) updateViewers('yt', data.viewers);
+        await getYTBroadcastDetails();
+      } else {
+        setTimeout(startYouTubeChat, 10000);
+      }
+    } catch(e) {
+      setTimeout(startYouTubeChat, 10000);
+    }
+  }
+
+  async function getYTBroadcastDetails() {
+    try {
+      const res = await fetch(`${API.yt}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'get_broadcast_details',
+          device_uid: getDeviceUid(),
+          broadcast_id: state.yt.broadcastId,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success && data.broadcast) {
+        const b = data.broadcast;
+        state.yt.liveChatId = b.liveStreamingDetails?.activeLiveChatId;
+        const actualStart = b.liveStreamingDetails?.actualStartTime;
+
+        if (actualStart) {
+          startDurationTick(actualStart, 'yt');
+          state.yt.timerSynced = true;
+        }
+
+        if (state.yt.liveChatId) {
+          if (SOURCE.yt === 'api') startYTApiPolling();
+          if (!state.yt.timerSynced) scheduleYTTimerSync();
+        } else {
+          setTimeout(getYTBroadcastDetails, 5000);
+        }
+      } else {
+        setTimeout(getYTBroadcastDetails, 10000);
+      }
+    } catch(e) {
+      setTimeout(getYTBroadcastDetails, 10000);
+    }
+  }
+
+  // Retries fetching actualStartTime every 5s until it arrives — then stops.
+  async function scheduleYTTimerSync() {
+    if (state.yt.timerSynced || !isLive) return;
+    try {
+      const res = await fetch(`${API.yt}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'get_broadcast_details',
+          device_uid: getDeviceUid(),
+          broadcast_id: state.yt.broadcastId,
+        }),
+      });
+      const data = await res.json();
+      const actualStart = data.broadcast?.liveStreamingDetails?.actualStartTime;
+      if (actualStart) {
+        startDurationTick(actualStart, 'yt');
+        state.yt.timerSynced = true;
+        return;
+      }
+    } catch(e) {}
+    setTimeout(scheduleYTTimerSync, 5000);
+  }
+
+  function startYTApiPolling() {
+    pollYTChat();
+    pollYTViewers();
+    pollYTStats();
+
+    state.yt.pollTimers.chat = setInterval(pollYTChat, POLL.chat);
+    state.yt.pollTimers.viewers = setInterval(pollYTViewers, POLL.viewers);
+    state.yt.pollTimers.stats = setInterval(pollYTStats, POLL.stats);
+  }
+
+  async function pollYTChat() {
+    if (!state.yt.liveChatId || !getDeviceUid()) return;
+
+    try {
+      const res = await fetch(`${API.yt}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'get_live_chat',
+          device_uid: getDeviceUid(),
+          live_chat_id: state.yt.liveChatId,
+          page_token: state.yt.nextPageToken,
+        }),
+      });
+      const data = await res.json();
+
+      if (data.nextPageToken) state.yt.nextPageToken = data.nextPageToken;
+
+      const messages = [
+        ...(data.messages?.text || []),
+        ...(data.messages?.superChat || []),
+        ...(data.messages?.memberMilestone || []),
+      ];
+
+      messages.forEach(msg => {
+        if (!msg.id || state.yt.seenIds.has(msg.id)) return;
+        state.yt.seenIds.add(msg.id);
+
+        const type = msg.snippet?.type || '';
+        const author = msg.authorDetails?.displayName || 'Anonymous';
+        const text = msg.snippet?.displayMessage || '';
+
+        if (type === 'superChatEvent') {
+          const amt = msg.snippet?.superChatDetails?.amountDisplayString || '?';
+          onNewSuperchat(author, amt, text, '#f59e0b');
+        } else if (type === 'memberMilestoneChatEvent') {
+          onNewSubscriber(author, 'yt', '(Member)');
+        } else if (text) {
+          onChatMessage(author, text, 'yt', null);
+        }
+      });
+    } catch(e) {}
+  }
+
+  async function pollYTViewers() {
+    if (!state.yt.broadcastId || !getDeviceUid()) return;
+
+    try {
+      const res = await fetch(`${API.yt}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'get_broadcast_viewers',
+          device_uid: getDeviceUid(),
+          broadcast_id: state.yt.broadcastId,
+        }),
+      });
+      const data = await res.json();
+      if (data.viewers !== undefined) updateViewers('yt', data.viewers);
+    } catch(e) {}
+  }
+
+  async function pollYTStats() {
+    if (!state.yt.broadcastId || !getDeviceUid()) return;
+
+    try {
+      const res = await fetch(`${API.yt}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          action: 'get_video_details',
+          device_uid: getDeviceUid(),
+          video_ids: state.yt.broadcastId,
+        }),
+      });
+      const data = await res.json();
+      if (data.videos?.[0]?.statistics) {
+        const s = data.videos[0].statistics;
+        updateLikes(s.likeCount || 0);
+        updateTotalViews(s.viewCount || 0);
+      }
+    } catch(e) {}
+  }
+
+  function stopYouTubePolling() {
+    Object.values(state.yt.pollTimers).forEach(t => { if (t) clearInterval(t); });
+    state.yt.pollTimers = { chat: null, viewers: null, stats: null };
+    state.yt.timerSynced = false;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  FACEBOOK API
+  // ══════════════════════════════════════════════════════════════════
+  async function startFacebookChat() {
+    if (!getDeviceUid()) return;
+    stopFacebookPolling();
+
+    try {
+      const res = await fetch(`${API.fb}/stream?uid=${getDeviceUid()}`);
+      const data = await res.json();
+      const live = (data.data || []).find(v => v.status === 'LIVE');
+
+      if (live) {
+        state.fb.videoId = live.id;
+        if (live.live_views !== undefined) updateViewers('fb', live.live_views);
+        if (live.broadcast_start_time) startDurationTick(live.broadcast_start_time, 'fb');
+
+        if (SOURCE.fb === 'api') startFBApiPolling();
+      } else {
+        setTimeout(startFacebookChat, 10000);
+      }
+    } catch(e) {
+      setTimeout(startFacebookChat, 10000);
+    }
+  }
+
+  function startFBApiPolling() {
+    pollFBChat();
+    pollFBViewers();
+
+    state.fb.pollTimers.chat = setInterval(pollFBChat, POLL.chat);
+    state.fb.pollTimers.viewers = setInterval(pollFBViewers, POLL.viewers);
+  }
+
+  async function pollFBChat() {
+    if (!state.fb.videoId || !getDeviceUid()) return;
+
+    try {
+      const params = new URLSearchParams({
+        uid: getDeviceUid(),
+        video_id: state.fb.videoId
+      });
+      if (state.fb.sinceTimestamp) params.append('since', state.fb.sinceTimestamp);
+
+      const res = await fetch(`${API.fb}/comments?${params}`);
+      const data = await res.json();
+
+      if (data.paging?.cursors?.after) {
+        state.fb.sinceTimestamp = Math.floor(Date.now() / 1000).toString();
+      }
+
+      data.data?.forEach(comment => {
+        if (state.fb.seenIds.has(comment.id)) return;
+        state.fb.seenIds.add(comment.id);
+
+        const name = comment.from?.name || 'Someone';
+        const text = comment.message || '';
+        if (text) onChatMessage(name, text, 'fb', null);
+      });
+    } catch(e) {}
+  }
+
+  async function pollFBViewers() {
+    if (!state.fb.videoId || !getDeviceUid()) return;
+
+    try {
+      const res = await fetch(`${API.fb}/stream?uid=${getDeviceUid()}`);
+      const data = await res.json();
+      const live = (data.data || []).find(v => v.id === state.fb.videoId);
+      if (live) updateViewers('fb', live.live_views || 0);
+    } catch(e) {}
+  }
+
+  function stopFacebookPolling() {
+    Object.values(state.fb.pollTimers).forEach(t => { if (t) clearInterval(t); });
+    state.fb.pollTimers = { chat: null, viewers: null };
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  TWITCH API + IRC
+  // ══════════════════════════════════════════════════════════════════
+  async function startTwitch() {
+    if (!getDeviceUid()) return;
+    stopTwitch();
+
+    try {
+      const res = await fetch(`${API.tw}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          device_uid: getDeviceUid(),
+          action: 'get_stream'
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (data.viewers !== undefined) updateViewers('tw', data.viewers);
+        if (data.started_at) startDurationTick(data.started_at, 'tw');
+
+        if (SOURCE.tw === 'se') {
+          // SE WebSocket handles events
+        } else {
+          startTwitchViewerPolling();
+        }
+
+        if (data.channel_name) {
+          startTwitchIRC(data.channel_name);
+        }
+      } else {
+        setTimeout(startTwitch, 10000);
+      }
+    } catch(e) {
+      setTimeout(startTwitch, 10000);
+    }
+  }
+
+  function startTwitchViewerPolling() {
+    pollTwitchViewers();
+    state.tw.pollTimers.viewers = setInterval(pollTwitchViewers, POLL.viewers);
+  }
+
+  async function pollTwitchViewers() {
+    if (!getDeviceUid()) return;
+
+    try {
+      const res = await fetch(`${API.tw}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({
+          device_uid: getDeviceUid(),
+          action: 'get_stream'
+        }),
+      });
+      const data = await res.json();
+      if (data.viewers !== undefined) updateViewers('tw', data.viewers);
+    } catch(e) {}
+  }
+
+  function startTwitchIRC(channelName) {
+    stopTwitchIRC();
+    state.tw.channel = channelName.toLowerCase();
+
+    const ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+    state.tw.ws = ws;
+
+    ws.onopen = () => {
+      ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+      ws.send('NICK justinfan12345');
+      ws.send('JOIN #' + state.tw.channel);
+      state.tw.connected = true;
+    };
+
+    ws.onmessage = e => {
+      const raw = e.data;
+      if (raw.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
+
+      const match = raw.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
+      if (!match) return;
+
+      let displayName = match[1];
+      let color = null;
+
+      const dnMatch = raw.match(/display-name=([^;]+)/);
+      if (dnMatch?.[1]) displayName = dnMatch[1];
+
+      const colMatch = raw.match(/color=(#[0-9A-Fa-f]{6})/);
+      if (colMatch) color = colMatch[1];
+
+      onChatMessage(displayName, match[2].trim(), 'tw', color);
+    };
+
+    ws.onerror = e => {};
+    ws.onclose = () => {
+      state.tw.connected = false;
+      if (_durationTimer) {
+        state.tw.reconnTimer = setTimeout(() => startTwitchIRC(channelName), 5000);
+      }
+    };
+  }
+
+  function stopTwitchIRC() {
+    if (state.tw.reconnTimer) { clearTimeout(state.tw.reconnTimer); state.tw.reconnTimer = null; }
+    if (state.tw.ws) { try { state.tw.ws.close(); } catch(e){} state.tw.ws = null; }
+    state.tw.connected = false;
+  }
+
+  function stopTwitch() {
+    stopTwitchIRC();
+    if (state.tw.pollTimers.viewers) { clearInterval(state.tw.pollTimers.viewers); state.tw.pollTimers.viewers = null; }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  STREAMELEMENTS WEBSOCKET
+  // ══════════════════════════════════════════════════════════════════
+  const SE_API_URL = 'https://api.streamelements.com/kappa/v2';
+  const CFG_KEY = 'overlay_config';
+
+  function loadSEConfig() {
+    try {
+      const raw = localStorage.getItem(CFG_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch(e) {}
+    return null;
+  }
+
+  function connectAllSE() {
+    const scfg = loadSEConfig();
+    if (!scfg?.channels) return;
+
+    ['yt','fb','tw'].forEach(pl => {
+      if (SOURCE[pl] === 'se') {
+        const ch = scfg.channels[pl];
+        if (ch?.jwt) connectSEChannel(pl, ch.jwt, ch.channelId);
+      }
+    });
+  }
+
+  function disconnectAllSE() {
+    Object.values(socks).forEach(s => { try { s.disconnect(); } catch(e){} });
+    Object.keys(socks).forEach(k => delete socks[k]);
+  }
+
+  function connectSEChannel(platform, jwt, channelId) {
+    if (socks[platform]) { try { socks[platform].disconnect(); } catch(e){} }
+
+    const sock = io('https://realtime.streamelements.com', { transports:['websocket'] });
+    socks[platform] = sock;
+
+    sock.on('connect', () => sock.emit('authenticate', { method:'jwt', token:jwt }));
+
+    sock.on('authenticated', () => {
+      if (channelId) fetchSEStats(platform, jwt, channelId);
+    });
+
+    sock.on('unauthorized', e => {});
+    sock.on('event', data => routeSEEvent(platform, data));
+
+    sock.on('event:update', data => {
+      if (data.concurrent !== undefined) updateViewers(platform, data.concurrent);
+    });
+  }
+
+  function fetchSEStats(platform, jwt, channelId) {
+    fetch(`${SE_API_URL}/sessions/${channelId}`, {
+      headers: { Authorization: 'JWT ' + jwt }
+    })
+    .then(r => r.json())
+    .then(s => {
+      if (!s?.data) return;
+      if (s.data.concurrent !== undefined) updateViewers(platform, s.data.concurrent);
+    })
+    .catch(() => {});
+  }
+
+  function routeSEEvent(platform, data) {
+    const type = (data.type || '').toLowerCase();
+    const d = data.data || {};
+    const name = d.username || d.displayName || d.name || 'Someone';
+
+    switch (type) {
+      case 'follow':
+        onNewFollower(name, platform);
+        break;
+      case 'subscriber': {
+        const tier = d.tier === 'prime' ? ' (Prime)'
+                   : d.tier === '2000'  ? ' (T2)'
+                   : d.tier === '3000'  ? ' (T3)'
+                   : d.gifted           ? ' (Gifted)' : '';
+        onNewSubscriber(name, platform, tier);
+        break;
+      }
+      case 'tip':
+        onNewDonation(name,
+          d.amount ? '$' + parseFloat(d.amount).toFixed(2) : '?',
+          d.message || '');
+        break;
+      case 'cheer':
+        onNewDonation(name, (d.amount || '?') + ' Bits', d.message || 'Cheer!');
+        break;
+      case 'raid':
+        onNewFollower('⚔️ Raid from ' + name + ' (' + (d.amount || d.raiders || '?') + ' raiders)', platform);
+        break;
+      case 'host':
+        onNewFollower('📡 Host from ' + name + (d.viewers ? ' (' + d.viewers + ' viewers)' : ''), platform);
+        break;
+      default:
+        break;
+    }
+  }
+  // ══════════════════════════════════════════════════════════════
+//  STATE SYNC — streaming_scene.html
+//  Add this block inside the existing <script> tag,
+//  just after the existing variable declarations
+//  (after: let isPaused = false;)
+// ══════════════════════════════════════════════════════════════
+
+function applyState(state) {
+// Mic mute
+if (typeof state.micMuted !== 'undefined') {
+  micMuted = state.micMuted;
+  document.getElementById('micBtn')?.classList.toggle('muted', micMuted);
+  const lbl = document.getElementById('micLbl');
+  if (lbl) lbl.textContent = micMuted ? 'Muted' : 'Mic';
+}
+
+// Camera — only sync after stream has started so the initial
+// "Hidden" state is not overridden by a pre-stream state push.
+if (typeof state.cameraEnabled !== 'undefined' && isLive) {
+  camMuted = !state.cameraEnabled;
+  document.getElementById('camBtn')?.classList.toggle('muted', camMuted);
+  const lbl = document.getElementById('camLbl');
+  if (lbl) lbl.textContent = camMuted ? 'Hidden' : 'Cam';
+}
+
+// BRB / pause
+if (typeof state.isBrb !== 'undefined') {
+  if (state.isBrb && !isPaused) onStreamPaused();
+  else if (!state.isBrb && isPaused) onStreamResumed();
+}
+
+// Stream state — live pill + isLive flag
+if (typeof state.streamState !== 'undefined') {
+  isLive = state.streamState === 'streaming';
+  document.getElementById('livePill')?.classList.toggle('active', isLive);
+  document.getElementById('liveDot')?.classList.toggle('active', isLive);
+}
+}
+
+window.onStateChanged = function(json) {
+try { applyState(JSON.parse(json)); } catch(e) {}
+};
+
+function loadInitialState() {
+if (window.Android && Android.getAppState) {
+  try { applyState(JSON.parse(Android.getAppState())); } catch(e) {}
+}
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  AUTO-DETECT LIVE STREAM ON LOAD
+//  Fires when streaming_scene loads while stream is already running
+//  (e.g. navigating back, or stream started externally from PC)
+//  Checks lifeCycleStatus === 'live' before starting connections.
+// ══════════════════════════════════════════════════════════════════
+async function checkIfAlreadyLive() {
+  const uid = getDeviceUid();
+  if (!uid) { setTimeout(checkIfAlreadyLive, 1500); return; }
+  if (isLive) return; // already connected via onStreamStarted
+
+  try {
+    const res = await fetch(API.yt, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({ action: 'get_broadcast_viewers', device_uid: uid }),
+    });
+    const data = await res.json();
+    if (!data.broadcast_id) return;
+
+    // Verify actually live via lifeCycleStatus
+    const detailRes = await fetch(API.yt, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+      body: JSON.stringify({
+        action: 'get_broadcast_details',
+        device_uid: uid,
+        broadcast_id: data.broadcast_id,
+      }),
+    });
+    const detail = await detailRes.json();
+    const status = detail.broadcast?.status?.lifeCycleStatus || '';
+    if (!['live', 'testing', 'liveStarting'].includes(status)) return;
+
+    // Confirmed live — start all connections
+    isLive = true;
+    document.getElementById('livePill')?.classList.add('active');
+    document.getElementById('liveDot')?.classList.add('active');
+    startBitratePoller();
+    startAllConnections();
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', loadInitialState);
+document.addEventListener('DOMContentLoaded', startBitratePoller);
+// Start connections immediately on load — no need to wait for onStreamStarted
+// SUPABASE_KEY is hardcoded so fetch works immediately without bridge timing
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(startAllConnections, 300);
+  setTimeout(checkIfAlreadyLive, 800);
+});
+
+  // ══════════════════════════════════════════════════════════════════
+  //  SEND CHAT
+  // ══════════════════════════════════════════════════════════════════
+  async function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    removeEmpty('chat');
+    const div = document.createElement('div');
+    div.className = 'chat-msg mine';
+    div.innerHTML = `<div class="chat-av av-accent">Me</div>
+      <div class="chat-bubble">
+        <div class="chat-name">You</div>
+        <div class="chat-text">${esc(text)}</div>
+      </div>`;
+    appendTo('chat', div);
+    input.value = '';
+
+    if (state.yt.liveChatId && getDeviceUid()) {
+      try {
+        await fetch(`${API.yt}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+          body: JSON.stringify({
+            action: 'send_live_chat_message',
+            device_uid: getDeviceUid(),
+            live_chat_id: state.yt.liveChatId,
+            message_text: text,
+          }),
+        });
+      } catch(e) {}
+    }
+
+    if (state.tw.connected && state.tw.ws && state.tw.channel) {
+      try {
+        state.tw.ws.send('PRIVMSG #' + state.tw.channel + ' :' + text);
+      } catch(e) {}
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  START ALL CONNECTIONS
+  // ══════════════════════════════════════════════════════════════════
+  function startAllConnections() {
+    if (!getDeviceUid()) {
+      setTimeout(startAllConnections, 2000);
+      return;
+    }
+
+    startYouTubeChat();
+    startFacebookChat();
+    startTwitch();
+    connectAllSE();
+  }
+
+  function stopAllConnections() {
+    stopYouTubePolling();
+    stopFacebookPolling();
+    stopTwitch();
+    disconnectAllSE();
+    stopDurationTick();
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  STREAM EVENT CALLBACKS
+  // ══════════════════════════════════════════════════════════════════
+  window.onStreamStarted = function(data) {
+    const parts = data.split('|');
+    const totalStr = parts[0];
+    startBitratePoller();
+
+    if (parts.length > 1) {
+      try {
+        initialState = JSON.parse(parts[1]);
+
+        micMuted = initialState.mic;
+        document.getElementById('micBtn')?.classList.toggle('muted', micMuted);
+        if (document.getElementById('micLbl')) {
+          document.getElementById('micLbl').textContent = micMuted ? 'Muted' : 'Mic';
+        }
+
+        // Camera always starts as Hidden in streaming scene.
+        // The encoder has camera ON sending to viewers — the streamer
+        // consciously enables it here when ready. Preview PiP state
+        // is irrelevant to this decision.
+        camMuted = true;
+        document.getElementById('camBtn')?.classList.add('muted');
+        if (document.getElementById('camLbl')) {
+          document.getElementById('camLbl').textContent = 'Hidden';
+        }
+      } catch(e) {}
+    }
+
+    isLive = true;
+    document.getElementById('livePill')?.classList.add('active');
+    document.getElementById('liveDot')?.classList.add('active');
+
+    startAllConnections();
+  };
+
+  window.onStreamConnected = function() {
+    document.getElementById('reconnectBanner')?.classList.remove('show');
+    document.getElementById('retryBtn')?.classList.remove('show');
+  };
+
+  window.onStreamEnded = function() {
+    document.getElementById('livePill')?.classList.remove('active');
+    document.getElementById('liveDot')?.classList.remove('active');
+    stopAllConnections();
+    stopBitratePoller();
+  };
+
+  window.onStreamError = function(msg) {
+    onConnectionLost();
+  };
+
+  // Push callback still works if the event arrives
+window.onBitrateUpdate = function(kbpsStr) {
+  updateBitrate(parseInt(kbpsStr) || 0);
+};
+
+// Polling fallback — catches the case where streaming scene
+// loaded after the stream started and missed early broadcasts
+let _bitratePoller = null;
+
+function startBitratePoller() {
+  stopBitratePoller();
+  _bitratePoller = setInterval(() => {
+      if (window.Android && Android.getCurrentBitrate) {
+          const kbps = Android.getCurrentBitrate();
+          if (kbps > 0) updateBitrate(kbps);
+      }
+  }, 1000);
+}
+
+function stopBitratePoller() {
+  if (_bitratePoller) { clearInterval(_bitratePoller); _bitratePoller = null; }
+}
+
+  window.onBitrateChanged = function(kbpsStr) {
+    pendingKbps = parseInt(kbpsStr) || pendingKbps;
+    document.getElementById('brSlider').value = pendingKbps;
+    document.getElementById('brVal').textContent = pendingKbps;
+    updateBitrate(pendingKbps);
+  };
+
+  window.onMicToggled = function(mutedStr) {
+    micMuted = mutedStr === 'true';
+    document.getElementById('micBtn')?.classList.toggle('muted', micMuted);
+    if (document.getElementById('micLbl'))
+      document.getElementById('micLbl').textContent = micMuted ? 'Muted' : 'Mic';
+  };
+
+  window.onStreamPaused = onStreamPaused;
+  window.onStreamResumed = onStreamResumed;
+
+  // ══════════════════════════════════════════════════════════════════
+  //  INIT
+  // ══════════════════════════════════════════════════════════════════
+  // Connections are started by onStreamStarted fired from MainActivity via callJs.
+  // Do NOT auto-start here — it races against the real event and starts the timer
+  // from Date.now() instead of the actual stream start time from the YT API.
+
+  // ══════════════════════════════════════════════════════════════════
+  //  VISIBILITY — force restart connections when webView comes to foreground
+  // ══════════════════════════════════════════════════════════════════
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // Always restart — whether or not isLive, to recover from background throttling
+      startAllConnections();
+    }
+  });
+</script>
+</body>
+</html>
