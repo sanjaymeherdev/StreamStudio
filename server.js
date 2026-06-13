@@ -1189,6 +1189,55 @@ app.get('/api/template/:id/json', async (req, res) => {
         res.status(500).json({ error: error.message })
     }
 })
+
+// Check if design name exists
+app.get('/api/overlay/check-name', async (req, res) => {
+    try {
+        const { name } = req.query;
+        const { data, error } = await supabase
+            .from('overlay_designs')
+            .select('id, name')
+            .eq('name', name)
+            .maybeSingle();
+        
+        if (error && error.code !== 'PGRST116') throw error;
+        
+        res.json({ exists: !!data, id: data?.id || null });
+    } catch (error) {
+        res.json({ exists: false, id: null });
+    }
+});
+
+// Update existing design (overwrite)
+app.put('/api/overlay/update/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, description, design_json } = req.body;
+        
+        const { data, error } = await supabase
+            .from('overlay_designs')
+            .update({
+                name: name,
+                description: description || '',
+                design_json: design_json,
+                updated_at: new Date()
+            })
+            .eq('id', id)
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        res.json({
+            success: true,
+            id: data.id,
+            slug: data.slug,
+            url: `${SELF_URL}/o/${data.slug}`
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // ============================================
 // START SERVER
 // ============================================

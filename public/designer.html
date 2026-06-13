@@ -25,7 +25,7 @@
             height: 100vh;
         }
         
-        /* Left Panel - Properties */
+        /* Left Panel */
         .panel {
             width: 320px;
             background: #0F1420;
@@ -115,12 +115,18 @@
             border-color: #4D9FFF;
         }
         
-        /* Elements List */
+        .tool-btn.success {
+            background: #4DFFA0;
+            color: #0A0D14;
+            border-color: #4DFFA0;
+        }
+        
+        /* Elements Section */
         .elements-section {
-            flex: 1;
-            min-height: 150px;
+            flex: 3;
             overflow-y: auto;
             padding: 12px;
+            min-height: 300px;
         }
         
         .section-title {
@@ -197,12 +203,21 @@
             white-space: nowrap;
         }
         
+        .empty-state {
+            text-align: center;
+            color: #6A7A9A;
+            padding: 40px 20px;
+            font-size: 12px;
+        }
+        
         /* Properties Panel */
         .properties-panel {
             padding: 12px;
             border-top: 1px solid #1F2A3E;
             background: #0F1420;
             display: none;
+            max-height: 40%;
+            overflow-y: auto;
         }
         
         .properties-panel.show {
@@ -239,12 +254,13 @@
         }
         
         .color-input {
-            width: 40px;
+            width: 100%;
             height: 32px;
             padding: 2px;
             border-radius: 4px;
             border: 1px solid #1F2A3E;
             cursor: pointer;
+            background: #1A2232;
         }
         
         /* Canvas Area */
@@ -261,7 +277,6 @@
         .canvas-wrapper {
             position: relative;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            background: repeating-checkerboard;
         }
         
         #canvas {
@@ -375,7 +390,7 @@
             z-index: 10001;
         }
         
-        /* Add Element Modal */
+        /* Modal */
         .modal {
             position: fixed;
             inset: 0;
@@ -468,6 +483,11 @@
             transform: scale(1.05);
         }
         
+        .new-btn {
+            background: #4D9FFF;
+            box-shadow: 0 4px 15px rgba(77,159,255,0.3);
+        }
+        
         .toast {
             position: fixed;
             bottom: 100px;
@@ -481,6 +501,8 @@
             z-index: 1000;
             display: none;
             animation: slideIn 0.3s ease;
+            max-width: 400px;
+            white-space: pre-wrap;
         }
         
         .toast.error {
@@ -508,7 +530,7 @@
             border-radius: 3px;
         }
         
-        /* Canvas elements */
+        /* Draggable elements */
         .draggable-element {
             position: absolute;
             cursor: move;
@@ -534,13 +556,14 @@
         
         <div class="toolbar">
             <button class="tool-btn" onclick="openAddModal()">+ Add Element</button>
-            <button class="tool-btn" id="clearCanvasBtn">🗑 Clear All</button>
+            <button class="tool-btn danger" id="clearCanvasBtn">🗑 Clear All</button>
+            <button class="tool-btn success" id="newDesignBtn">✨ New Design</button>
         </div>
         
         <div class="elements-section">
             <div class="section-title">📦 Elements</div>
             <div id="elementsList" class="elements-list">
-                <div class="hint" style="text-align:center;color:#6A7A9A;padding:20px;">Click + Add Element to start</div>
+                <div class="empty-state">✨ Click "New Design" to start<br>or press "Add Element"</div>
             </div>
         </div>
         
@@ -566,7 +589,8 @@
 
 <!-- Bottom Bar -->
 <div class="bottom-bar">
-    <button class="save-btn" id="saveDesignBtn">💾 Save Overlay & Get URL</button>
+    <button class="save-btn new-btn" id="newDesignBtn2">✨ New Design</button>
+    <button class="save-btn" id="saveDesignBtn">💾 Save Overlay</button>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -579,7 +603,7 @@
             <button onclick="closeAddModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
         </div>
         <div class="modal-body">
-            <div class="element-option" onclick="addElement('shape')">
+            <div class="element-option" onclick="addShapeMenu()">
                 <div class="emoji">🔷</div>
                 <div class="name">Shape</div>
             </div>
@@ -607,6 +631,48 @@
     </div>
 </div>
 
+<!-- Shape Modal -->
+<div id="shapeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Add Shape</h3>
+            <button onclick="closeShapeModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="element-option" onclick="addShape('rectangle')">
+                <div class="emoji">📐</div>
+                <div class="name">Rectangle</div>
+                <div style="font-size:10px;color:#6A7A9A;">Customizable corner radius</div>
+            </div>
+            <div class="element-option" onclick="addShape('circle')">
+                <div class="emoji">⚪</div>
+                <div class="name">Circle</div>
+            </div>
+            <div class="element-option" onclick="addShape('line')">
+                <div class="emoji">━━</div>
+                <div class="name">Line</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overwrite Confirmation Modal -->
+<div id="overwriteModal" class="modal">
+    <div class="modal-content" style="width:400px;">
+        <div class="modal-header">
+            <h3>⚠️ Design Exists</h3>
+            <button onclick="closeOverwriteModal()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
+        </div>
+        <div class="modal-body" style="display:block;">
+            <p id="overwriteMessage" style="margin-bottom:20px;">A design with this name already exists.</p>
+            <div style="display:flex;gap:10px;">
+                <button class="tool-btn" style="flex:1;" onclick="closeOverwriteModal()">Cancel</button>
+                <button class="tool-btn success" style="flex:1;" id="confirmOverwriteBtn">Overwrite</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // ============================================
     // STATE MANAGEMENT
@@ -616,7 +682,8 @@
         name: '',
         description: '',
         elements: [],
-        nextId: 1
+        nextId: 1,
+        existingDesignId: null  // For overwrite
     };
     
     let selectedElementId = null;
@@ -627,7 +694,6 @@
     let elementStart = { x: 0, y: 0, width: 0, height: 0, rotation: 0 };
     let resizeCorner = null;
     
-    // Canvas dimensions
     const CANVAS_W = 1080;
     const CANVAS_H = 1920;
     
@@ -636,15 +702,15 @@
     // ============================================
     
     const templates = {
-        shape: {
+        rectangle: {
             type: 'shape',
             shapeType: 'rectangle',
-            width: 100,
+            width: 150,
             height: 100,
             borderRadius: 0,
             color: '#4DFFA0',
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 75,
+            y: CANVAS_H / 2 - 50,
             zIndex: 10,
             opacity: 100,
             animation: 'none',
@@ -656,8 +722,8 @@
             shapeType: 'circle',
             size: 80,
             color: '#4D9FFF',
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 40,
+            y: CANVAS_H / 2 - 40,
             zIndex: 10,
             opacity: 100,
             animation: 'none',
@@ -669,8 +735,8 @@
             width: 150,
             thickness: 3,
             color: '#FFFFFF',
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 75,
+            y: CANVAS_H / 2,
             rotation: 0,
             zIndex: 10,
             opacity: 100
@@ -682,8 +748,8 @@
             height: 'auto',
             borderRadius: 0,
             objectFit: 'contain',
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 100,
+            y: CANVAS_H / 2 - 150,
             zIndex: 10,
             opacity: 100,
             animation: 'none'
@@ -694,8 +760,8 @@
             width: 200,
             height: 'auto',
             objectFit: 'contain',
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 100,
+            y: CANVAS_H / 2 - 150,
             zIndex: 10,
             opacity: 100,
             loop: true
@@ -707,8 +773,8 @@
             height: 180,
             borderRadius: 0,
             objectFit: 'cover',
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 160,
+            y: CANVAS_H / 2 - 90,
             zIndex: 10,
             opacity: 100,
             loop: true
@@ -726,8 +792,8 @@
             padding: 0,
             borderRadius: 0,
             maxWidth: 400,
-            x: CANVAS_W / 2,
-            y: CANVAS_H / 2,
+            x: CANVAS_W / 2 - 200,
+            y: CANVAS_H / 2 - 18,
             zIndex: 10,
             opacity: 100,
             animation: 'none'
@@ -744,8 +810,8 @@
             iconSize: 24,
             padding: '8px 16px',
             borderRadius: 50,
-            x: 100,
-            y: 100,
+            x: CANVAS_W / 2 - 100,
+            y: CANVAS_H - 100,
             zIndex: 10,
             opacity: 100,
             animation: 'none'
@@ -808,7 +874,6 @@
             div.style.animation = `${el.animation} ${el.animationDuration || 0.5}s ease-out both`;
         }
         
-        // Add animation styles if not already present
         addAnimationStyles();
         
         // Content based on type
@@ -832,6 +897,7 @@
         } else if (el.type === 'image' || el.type === 'gif') {
             const img = document.createElement('img');
             img.src = el.src;
+            img.crossOrigin = 'anonymous';
             img.style.width = typeof el.width === 'number' ? `${el.width}px` : el.width;
             img.style.height = typeof el.height === 'number' ? `${el.height}px` : el.height;
             img.style.objectFit = el.objectFit;
@@ -927,7 +993,7 @@
     function renderElementsList() {
         const container = document.getElementById('elementsList');
         if (state.elements.length === 0) {
-            container.innerHTML = '<div class="hint" style="text-align:center;color:#6A7A9A;padding:20px;">Click + Add Element to start</div>';
+            container.innerHTML = '<div class="empty-state">✨ No elements yet<br>Click "Add Element" to start</div>';
             return;
         }
         
@@ -986,7 +1052,6 @@
             transformContainer = document.getElementById('transform-container');
         }
         
-        // Get element position in canvas
         const elementDiv = document.querySelector(`.draggable-element[data-id="${selectedElementId}"]`);
         if (!elementDiv) return;
         
@@ -1012,7 +1077,6 @@
             <div class="transform-delete" style="left: ${left + width + 10}px; top: ${top - 15}px;">✕</div>
         `;
         
-        // Attach event listeners
         document.querySelectorAll('.transform-handle').forEach(handle => {
             handle.addEventListener('mousedown', (e) => {
                 e.stopPropagation();
@@ -1038,19 +1102,19 @@
     }
     
     function startDrag(e, elementId) {
-        const el = state.elements.find(e => e.id === elementId);
-        if (!el) return;
-        
         isDragging = true;
         dragStart = { x: e.clientX, y: e.clientY };
-        elementStart = { x: el.x, y: el.y };
+        const el = state.elements.find(e => e.id === elementId);
+        if (el) {
+            elementStart = { x: el.x, y: el.y };
+        }
         
         document.addEventListener('mousemove', onDrag);
         document.addEventListener('mouseup', stopDrag);
     }
     
     function onDrag(e) {
-        if (!isDragging) return;
+        if (!isDragging || selectedElementId === null) return;
         
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
@@ -1161,14 +1225,7 @@
     // ============================================
     
     function addElement(type) {
-        let template;
-        if (type === 'shape') {
-            // Show shape submenu
-            showShapeMenu();
-            closeAddModal();
-            return;
-        }
-        template = { ...templates[type], id: state.nextId++, x: CANVAS_W / 2, y: CANVAS_H / 2 };
+        const template = { ...templates[type], id: state.nextId++ };
         state.elements.push(template);
         selectElement(template.id);
         renderCanvas();
@@ -1176,40 +1233,18 @@
         showToast(`Added ${type} element`);
     }
     
-    function showShapeMenu() {
-        const modal = document.createElement('div');
-        modal.className = 'modal show';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add Shape</h3>
-                    <button onclick="this.closest('.modal').remove()" style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
-                </div>
-                <div class="modal-body">
-                    <div class="element-option" onclick="addShape('rectangle')">
-                        <div class="emoji">📐</div>
-                        <div class="name">Rectangle</div>
-                    </div>
-                    <div class="element-option" onclick="addShape('circle')">
-                        <div class="emoji">⚪</div>
-                        <div class="name">Circle</div>
-                    </div>
-                    <div class="element-option" onclick="addShape('line')">
-                        <div class="emoji">━━</div>
-                        <div class="name">Line</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        window.addShape = (shapeType) => {
-            const template = { ...templates[shapeType], id: state.nextId++, x: CANVAS_W / 2, y: CANVAS_H / 2 };
-            state.elements.push(template);
-            selectElement(template.id);
-            renderCanvas();
-            modal.remove();
-            showToast(`Added ${shapeType}`);
-        };
+    function addShapeMenu() {
+        closeAddModal();
+        document.getElementById('shapeModal').classList.add('show');
+    }
+    
+    function addShape(shapeType) {
+        const template = { ...templates[shapeType], id: state.nextId++ };
+        state.elements.push(template);
+        selectElement(template.id);
+        renderCanvas();
+        closeShapeModal();
+        showToast(`Added ${shapeType}`);
     }
     
     function selectElement(id) {
@@ -1238,6 +1273,28 @@
         }
     }
     
+    function newDesign() {
+        if (state.elements.length > 0) {
+            if (confirm('Start a new design? Current design will be lost if not saved.')) {
+                resetDesign();
+            }
+        } else {
+            resetDesign();
+        }
+    }
+    
+    function resetDesign() {
+        state.elements = [];
+        state.nextId = 1;
+        state.existingDesignId = null;
+        selectedElementId = null;
+        document.getElementById('designName').value = '';
+        document.getElementById('designDesc').value = '';
+        document.getElementById('propertiesPanel').classList.remove('show');
+        renderCanvas();
+        showToast('New design ready');
+    }
+    
     // ============================================
     // PROPERTIES PANEL
     // ============================================
@@ -1251,10 +1308,7 @@
         
         panel.classList.add('show');
         
-        let html = '';
-        
-        // Common properties
-        html += `
+        let html = `
             <div class="prop-group">
                 <label class="prop-label">Position X</label>
                 <input type="number" class="prop-input" id="prop_x" value="${Math.round(el.x)}" onchange="updateElementProp('x', parseInt(this.value))">
@@ -1281,54 +1335,60 @@
             </div>
         `;
         
-        // Type-specific properties
-        if (el.type === 'shape') {
-            if (el.shapeType === 'rectangle') {
-                html += `
-                    <div class="prop-group">
-                        <label class="prop-label">Width (px)</label>
-                        <input type="number" class="prop-input" value="${el.width}" onchange="updateElementProp('width', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Height (px)</label>
-                        <input type="number" class="prop-input" value="${el.height}" onchange="updateElementProp('height', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Border Radius (px)</label>
-                        <input type="number" class="prop-input" value="${el.borderRadius || 0}" onchange="updateElementProp('borderRadius', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Color</label>
-                        <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                    </div>
-                `;
-            } else if (el.shapeType === 'circle') {
-                html += `
-                    <div class="prop-group">
-                        <label class="prop-label">Size (px)</label>
-                        <input type="number" class="prop-input" value="${el.size}" onchange="updateElementProp('size', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Color</label>
-                        <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                    </div>
-                `;
-            } else if (el.shapeType === 'line') {
-                html += `
-                    <div class="prop-group">
-                        <label class="prop-label">Length (px)</label>
-                        <input type="number" class="prop-input" value="${el.width}" onchange="updateElementProp('width', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Thickness (px)</label>
-                        <input type="number" class="prop-input" value="${el.thickness}" onchange="updateElementProp('thickness', parseInt(this.value))">
-                    </div>
-                    <div class="prop-group">
-                        <label class="prop-label">Color</label>
-                        <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
-                    </div>
-                `;
-            }
+        // Rectangle shape properties (customizable)
+        if (el.type === 'shape' && el.shapeType === 'rectangle') {
+            html += `
+                <div class="prop-group">
+                    <label class="prop-label">Width (px)</label>
+                    <input type="number" class="prop-input" value="${el.width}" onchange="updateElementProp('width', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Height (px)</label>
+                    <input type="number" class="prop-input" value="${el.height}" onchange="updateElementProp('height', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Border Radius (px)</label>
+                    <input type="number" class="prop-input" value="${el.borderRadius || 0}" onchange="updateElementProp('borderRadius', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Color</label>
+                    <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
+                </div>
+            `;
+        }
+        
+        if (el.type === 'shape' && el.shapeType === 'circle') {
+            html += `
+                <div class="prop-group">
+                    <label class="prop-label">Size (px)</label>
+                    <input type="number" class="prop-input" value="${el.size}" onchange="updateElementProp('size', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Color</label>
+                    <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
+                </div>
+            `;
+        }
+        
+        if (el.type === 'shape' && el.shapeType === 'line') {
+            html += `
+                <div class="prop-group">
+                    <label class="prop-label">Length (px)</label>
+                    <input type="number" class="prop-input" value="${el.width}" onchange="updateElementProp('width', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Thickness (px)</label>
+                    <input type="number" class="prop-input" value="${el.thickness}" onchange="updateElementProp('thickness', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Rotation (°)</label>
+                    <input type="number" class="prop-input" value="${el.rotation || 0}" onchange="updateElementProp('rotation', parseInt(this.value))">
+                </div>
+                <div class="prop-group">
+                    <label class="prop-label">Color</label>
+                    <input type="color" class="color-input" value="${el.color}" onchange="updateElementProp('color', this.value)">
+                </div>
+            `;
         }
         
         if (el.type === 'text') {
@@ -1446,8 +1506,10 @@
     };
     
     // ============================================
-    // SAVE FUNCTION
+    // SAVE FUNCTION with OVERWRITE
     // ============================================
+    
+    let pendingSave = null;
     
     async function saveDesign() {
         const name = document.getElementById('designName').value.trim();
@@ -1467,25 +1529,58 @@
             }
         };
         
+        showToast('Checking for existing design...');
+        
+        try {
+            // Check if name exists
+            const checkResponse = await fetch(`/api/overlay/check-name?name=${encodeURIComponent(name)}`);
+            const existing = await checkResponse.json();
+            
+            if (existing.exists && existing.id) {
+                // Show overwrite confirmation
+                state.existingDesignId = existing.id;
+                document.getElementById('overwriteMessage').innerHTML = `A design named "<strong>${name}</strong>" already exists.<br><br>Do you want to overwrite it?`;
+                document.getElementById('overwriteModal').classList.add('show');
+                pendingSave = designData;
+                return;
+            }
+            
+            // No existing - save new
+            await performSave(designData);
+            
+        } catch (error) {
+            // If check fails, proceed with save
+            await performSave(designData);
+        }
+    }
+    
+    async function performSave(designData, overwriteId = null) {
         showToast('Saving design...');
         
         try {
-            const response = await fetch('/api/overlay/save', {
-                method: 'POST',
+            let url = '/api/overlay/save';
+            let method = 'POST';
+            let body = designData;
+            
+            if (overwriteId) {
+                url = `/api/overlay/update/${overwriteId}`;
+                method = 'PUT';
+                body = designData;
+            }
+            
+            const response = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(designData)
+                body: JSON.stringify(body)
             });
             
             const result = await response.json();
             
             if (result.success) {
                 showToast(`Saved! URL: ${result.url}`);
-                
-                // Copy URL to clipboard
                 await navigator.clipboard.writeText(result.url);
                 showToast(`URL copied to clipboard!\n${result.url}`);
                 
-                // Ask if user wants to preview
                 if (confirm('Design saved! View it now?')) {
                     window.open(result.url, '_blank');
                 }
@@ -1496,6 +1591,15 @@
             showToast('Save failed: ' + error.message, 'error');
         }
     }
+    
+    window.confirmOverwrite = async function() {
+        closeOverwriteModal();
+        if (pendingSave && state.existingDesignId) {
+            await performSave(pendingSave, state.existingDesignId);
+            pendingSave = null;
+            state.existingDesignId = null;
+        }
+    };
     
     // ============================================
     // HELPER FUNCTIONS
@@ -1519,28 +1623,31 @@
         document.getElementById('addModal').classList.remove('show');
     }
     
+    function closeShapeModal() {
+        document.getElementById('shapeModal').classList.remove('show');
+    }
+    
+    function closeOverwriteModal() {
+        document.getElementById('overwriteModal').classList.remove('show');
+        pendingSave = null;
+        state.existingDesignId = null;
+    }
+    
     // ============================================
     // INITIALIZATION
     // ============================================
     
     document.getElementById('saveDesignBtn').addEventListener('click', saveDesign);
     document.getElementById('clearCanvasBtn').addEventListener('click', clearCanvas);
+    document.getElementById('newDesignBtn').addEventListener('click', newDesign);
+    document.getElementById('newDesignBtn2').addEventListener('click', newDesign);
+    document.getElementById('confirmOverwriteBtn').addEventListener('click', confirmOverwrite);
     
-    // Add default example elements
-    function addExample() {
-        const textTemplate = { ...templates.text, id: state.nextId++, content: '🎬 LIVE NOW', fontSize: 48, color: '#4DFFA0', x: CANVAS_W / 2, y: 100, textAlign: 'center', fontWeight: 'bold' };
-        state.elements.push(textTemplate);
-        
-        const shapeTemplate = { ...templates.rectangle, id: state.nextId++, width: 300, height: 4, color: '#4DFFA0', x: CANVAS_W / 2 - 150, y: 160 };
-        state.elements.push(shapeTemplate);
-        
-        const socialTemplate = { ...templates.social, id: state.nextId++, x: CANVAS_W / 2, y: CANVAS_H - 100 };
-        state.elements.push(socialTemplate);
-        
-        renderCanvas();
-    }
+    // Empty canvas - no example, user must add elements
+    renderCanvas();
     
-    addExample();
+    // Add welcome message
+    showToast('✨ Click "Add Element" to start creating your overlay', 'success');
     
     // Prevent canvas click from deselecting
     document.getElementById('canvas').addEventListener('mousedown', (e) => {
@@ -1552,7 +1659,7 @@
         }
     });
     
-    // Handle window resize for canvas scaling
+    // Scale canvas
     function scaleCanvas() {
         const wrapper = document.getElementById('canvasWrapper');
         const area = document.querySelector('.canvas-area');
@@ -1569,7 +1676,7 @@
     window.addEventListener('resize', scaleCanvas);
     setTimeout(scaleCanvas, 100);
     
-    console.log('Designer ready');
+    console.log('Designer ready - Start by adding elements!');
 </script>
 </body>
 </html>
