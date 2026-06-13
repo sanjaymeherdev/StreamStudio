@@ -78,6 +78,8 @@
         .badge { display: inline-block; padding: 4px 12px; border-radius: 30px; font-size: 11px; font-weight: 700; }
         .badge-active   { background: #00b894; color: #000; }
         .badge-inactive { background: #4a5568; color: #fff; }
+        .badge-pending  { background: #f6ad55; color: #000; }
+        .badge-sent     { background: #4a5568; color: #fff; }
         .empty-state { text-align: center; padding: 48px 20px; color: #718096; }
         .empty-state h3 { margin-bottom: 8px; color: #a0aec0; font-weight: 500; }
         code { background: #0f3460; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-family: monospace; }
@@ -92,6 +94,7 @@
         .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         hr { border-color: #0f3460; margin: 8px 0; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .section-divider { margin: 28px 0 16px; padding-top: 16px; border-top: 1px solid #0f3460; }
         @media (max-width: 700px) {
             body { padding: 12px; }
             .panel { padding: 18px; }
@@ -222,7 +225,7 @@
                 </div>
                 <div class="form-group">
                     <label>JavaScript Code</label>
-                    <textarea id="customJsCode" placeholder="renderTemplate({...}, {});"></textarea>
+                    <textarea id="customJsCode" placeholder="renderTemplate({...}, {});  // use {{placeholder}} for variables"></textarea>
                 </div>
             </div>
 
@@ -236,9 +239,33 @@
                     <label>Device Slug (optional)</label>
                     <input type="text" id="jsDeviceSlug" placeholder="main-overlay" style="width:200px">
                 </div>
-                <button class="btn btn-success" onclick="sendJsInject()">🚀 Send to Overlay</button>
+            </div>
+
+            <!-- ACTIONS: 3 workflows -->
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="sendJsInject()">🚀 Send Now</button>
+                <button class="btn btn-secondary" onclick="openSaveTemplateModal()">💾 Save as Template</button>
+                <button class="btn btn-primary" onclick="openJsScheduleModal()">⏰ Schedule Send</button>
             </div>
             <div class="status-msg" id="jsStatus"></div>
+        </div>
+
+        <!-- SCHEDULED JS INJECTS TABLE -->
+        <div class="panel">
+            <div class="flex-between" style="margin-bottom:18px">
+                <h2 style="margin-bottom:0">⏰ Scheduled JS Injects</h2>
+                <button class="btn btn-secondary btn-sm" onclick="loadJsSchedules()">🔄 Refresh</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Template</th><th>Device Slug</th><th>Send At</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="jsScheduleTableBody">
+                        <tr><td colspan="6" class="empty-state"><h3>Loading…</h3></td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -261,7 +288,7 @@
     </div>
 </div>
 
-<!-- SCHEDULE MODAL -->
+<!-- SCHEDULE MODAL (overlay templates) -->
 <div class="modal-overlay" id="scheduleModal" onclick="if(event.target===this)closeScheduleModal()">
     <div class="modal">
         <h2 id="scheduleModalTitle">New Schedule</h2>
@@ -324,6 +351,53 @@
     </div>
 </div>
 
+<!-- SAVE JS AS TEMPLATE MODAL -->
+<div class="modal-overlay" id="saveTemplateModal" onclick="if(event.target===this)closeSaveTemplateModal()">
+    <div class="modal">
+        <h2>💾 Save as JS Template</h2>
+        <p style="font-size:13px;color:#8892b0;margin-bottom:16px">
+            This saves the JS currently in the editor into <code>js_templates</code>. It will then appear in the
+            "Existing Templates" dropdown for future use. Any <code>{{placeholder}}</code> tokens in the code are
+            detected automatically.
+        </p>
+        <div class="form-group">
+            <label>Template Name (file name)</label>
+            <input type="text" id="saveTemplateName" placeholder="e.g. lower-third-name">
+        </div>
+        <div id="saveTemplatePlaceholdersPreview" style="font-size:12px;color:#a0aec0;margin-bottom:8px"></div>
+        <div class="status-msg" id="saveTemplateStatus"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeSaveTemplateModal()">Cancel</button>
+            <button type="button" class="btn btn-success" onclick="saveJsAsTemplate()">💾 Save Template</button>
+        </div>
+    </div>
+</div>
+
+<!-- SCHEDULE JS INJECT MODAL -->
+<div class="modal-overlay" id="jsScheduleModal" onclick="if(event.target===this)closeJsScheduleModal()">
+    <div class="modal">
+        <h2>⏰ Schedule JS Inject</h2>
+        <p style="font-size:13px;color:#8892b0;margin-bottom:16px">
+            The JS currently shown in the editor/preview (with placeholders already filled) will be saved to
+            <code>js_schedules</code> and sent to <code>overlay_injects</code> automatically at the chosen time.
+        </p>
+        <div class="form-group">
+            <label>Send At</label>
+            <input type="datetime-local" id="jsScheduleSendAt" required>
+        </div>
+        <div class="form-group">
+            <label>Device Slug (optional)</label>
+            <input type="text" id="jsScheduleDeviceSlug" placeholder="main-overlay">
+        </div>
+        <div class="js-preview" id="jsSchedulePreview" style="display:block"></div>
+        <div class="status-msg" id="jsScheduleStatus"></div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeJsScheduleModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveJsSchedule()">⏰ Schedule</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ------------------- CONFIG --------------------
@@ -334,6 +408,7 @@ const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let schedules = [];
 let templates = [];
 let jsTemplates = [];
+let jsSchedules = [];
 let jsMode = 'existing';
 let currentJsTemplate = null;
 
@@ -343,6 +418,10 @@ function showStatus(elId, msg, isOk) {
     el.textContent = msg;
     el.className = 'status-msg ' + (isOk ? 'ok' : 'err');
     setTimeout(() => { el.className = 'status-msg'; }, 4000);
+}
+
+function sbHeaders(extra = {}) {
+    return Object.assign({ 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }, extra);
 }
 
 function switchTab(name) {
@@ -357,7 +436,7 @@ function switchTab(name) {
 async function refreshDeviceState() {
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/device_state?device_id=eq.phone1`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            headers: sbHeaders()
         });
         const data = await res.json();
         if (data && data[0]) {
@@ -379,7 +458,7 @@ function updateDeviceUrl(deviceId, url, overlayUntil) {
     else body.overlay_active_until = null;
     return fetch(`${SUPABASE_URL}/rest/v1/device_state?device_id=eq.${deviceId}`, {
         method: 'PATCH',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: sbHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
         body: JSON.stringify(body)
     }).then(r => { if(!r.ok) throw new Error(); refreshDeviceState(); return r; });
 }
@@ -413,7 +492,7 @@ async function quickTrigger() {
     showStatus('quickStatus', `✅ Triggered on ${deviceId} for ${duration}s`, true);
 }
 
-// ------------------- TEMPLATES -------------------
+// ------------------- TEMPLATES (overlay templates) -------------------
 async function loadTemplates() {
     try {
         const res = await fetch('/api/templates');
@@ -427,16 +506,23 @@ async function loadTemplates() {
     } catch(e) { console.error(e); }
 }
 
+// ------------------- JS TEMPLATES -------------------
 async function loadJsTemplates() {
     try {
         const res = await fetch('/api/js-templates');
         jsTemplates = await res.json();
         const sel = document.getElementById('jsTemplateSelect');
+        const prevValue = sel.value;
         sel.innerHTML = '<option value="">Select a JS template…</option>';
         jsTemplates.forEach(t => {
             let o = new Option(`${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id);
             sel.appendChild(o);
         });
+        // keep selection if it still exists (e.g. after saving a new template)
+        if (prevValue && jsTemplates.some(t => t.id === prevValue)) {
+            sel.value = prevValue;
+            onJsTemplateChange();
+        }
     } catch(e) { console.error(e); }
 }
 
@@ -468,6 +554,13 @@ function setJsMode(mode) {
     document.getElementById('jsPreview').style.display = 'none';
 }
 
+// Detects {{placeholder}} tokens in raw code (used when saving custom JS as a template)
+function extractPlaceholders(code) {
+    const matches = code.match(/\{\{(\w+)\}\}/g) || [];
+    const unique = [...new Set(matches.map(m => m.replace(/[{}]/g, '')))];
+    return unique;
+}
+
 function buildFinalJs() {
     if (jsMode === 'custom') return document.getElementById('customJsCode').value;
     if (!currentJsTemplate) return '';
@@ -488,6 +581,7 @@ function updateJsPreview() {
     pre.style.display = 'block';
 }
 
+// ---- WORKFLOW 1: Send Now (existing template OR custom JS, slug optional) ----
 async function sendJsInject() {
     let code = buildFinalJs();
     if (!code.trim()) { showStatus('jsStatus', 'No JS code to send', false); return; }
@@ -504,7 +598,140 @@ async function sendJsInject() {
     } catch(err) { showStatus('jsStatus', `❌ ${err.message}`, false); }
 }
 
-// ------------------- SCHEDULES -------------------
+// ---- WORKFLOW 2: Create & Save a new JS template, then it shows up in the dropdown ----
+function openSaveTemplateModal() {
+    const code = jsMode === 'custom' ? document.getElementById('customJsCode').value : (currentJsTemplate?.js_code || '');
+    if (!code.trim()) { alert('Write or select some JS code first'); return; }
+    const placeholders = extractPlaceholders(code);
+    document.getElementById('saveTemplateName').value = jsMode === 'custom' ? (document.getElementById('customJsName').value || '') : '';
+    document.getElementById('saveTemplatePlaceholdersPreview').textContent = placeholders.length
+        ? `Detected placeholders: ${placeholders.map(p => `{{${p}}}`).join(', ')}`
+        : 'No {{placeholders}} detected — this will be saved as a static template.';
+    document.getElementById('saveTemplateModal').classList.add('open');
+}
+
+function closeSaveTemplateModal() { document.getElementById('saveTemplateModal').classList.remove('open'); }
+
+async function saveJsAsTemplate() {
+    const name = document.getElementById('saveTemplateName').value.trim();
+    if (!name) { showStatus('saveTemplateStatus', 'Enter a template name', false); return; }
+    // Save the RAW code (with {{placeholders}} intact) for custom mode,
+    // or the current template's raw code if re-saving an existing one under a new name.
+    const rawCode = jsMode === 'custom' ? document.getElementById('customJsCode').value : (currentJsTemplate?.js_code || '');
+    if (!rawCode.trim()) { showStatus('saveTemplateStatus', 'No JS code to save', false); return; }
+    const placeholders = extractPlaceholders(rawCode);
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/js_templates`, {
+            method: 'POST',
+            headers: sbHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=representation' }),
+            body: JSON.stringify({ name, js_code: rawCode, placeholders })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const [saved] = await res.json();
+        showStatus('saveTemplateStatus', `✅ Saved "${name}"`, true);
+        await loadJsTemplates();
+        // switch to existing-templates mode and select the newly saved one
+        setJsMode('existing');
+        const sel = document.getElementById('jsTemplateSelect');
+        sel.value = saved.id;
+        onJsTemplateChange();
+        setTimeout(closeSaveTemplateModal, 800);
+    } catch (err) {
+        showStatus('saveTemplateStatus', `❌ ${err.message}`, false);
+    }
+}
+
+// ---- WORKFLOW 3: Schedule a JS inject for a future time ----
+function openJsScheduleModal() {
+    const code = buildFinalJs();
+    if (!code.trim()) { alert('Select/fill a template or write custom JS first'); return; }
+    document.getElementById('jsSchedulePreview').textContent = code;
+    // default to 1 minute from now
+    const d = new Date(Date.now() + 60 * 1000);
+    d.setSeconds(0, 0);
+    document.getElementById('jsScheduleSendAt').value = d.toISOString().slice(0, 16);
+    document.getElementById('jsScheduleDeviceSlug').value = document.getElementById('jsDeviceSlug').value.trim();
+    document.getElementById('jsScheduleModal').classList.add('open');
+}
+
+function closeJsScheduleModal() { document.getElementById('jsScheduleModal').classList.remove('open'); }
+
+async function saveJsSchedule() {
+    const code = buildFinalJs();
+    const sendAtLocal = document.getElementById('jsScheduleSendAt').value;
+    if (!sendAtLocal) { showStatus('jsScheduleStatus', 'Pick a send time', false); return; }
+    const sendAt = new Date(sendAtLocal).toISOString();
+    const deviceSlug = document.getElementById('jsScheduleDeviceSlug').value.trim() || null;
+    const templateName = jsMode === 'custom' ? (document.getElementById('customJsName').value || 'Custom') : (currentJsTemplate?.name || 'Unknown');
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules`, {
+            method: 'POST',
+            headers: sbHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+            body: JSON.stringify({
+                template_name: templateName,
+                js_code: code,
+                device_slug: deviceSlug,
+                send_at: sendAt,
+                sent: false
+            })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        showStatus('jsScheduleStatus', `✅ Scheduled for ${new Date(sendAt).toLocaleString()}`, true);
+        loadJsSchedules();
+        setTimeout(closeJsScheduleModal, 800);
+    } catch (err) {
+        showStatus('jsScheduleStatus', `❌ ${err.message}`, false);
+    }
+}
+
+async function loadJsSchedules() {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?order=send_at.asc`, { headers: sbHeaders() });
+        jsSchedules = await res.json();
+        renderJsScheduleTable();
+    } catch (e) {
+        console.error(e);
+        document.getElementById('jsScheduleTableBody').innerHTML = '<tr><td colspan="6" class="empty-state"><h3>⚠️ Could not load (is the js_schedules table set up?)</h3></td></tr>';
+    }
+}
+
+function renderJsScheduleTable() {
+    const tbody = document.getElementById('jsScheduleTableBody');
+    if (!jsSchedules.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><h3>📭 No scheduled JS injects</h3><p>Use "Schedule Send" above to add one</p></td></tr>';
+        return;
+    }
+    let rows = '';
+    for (let s of jsSchedules) {
+        const cls = s.sent ? 'badge-sent' : 'badge-pending';
+        const txt = s.sent ? 'Sent' : 'Pending';
+        rows += `<tr>
+            <td><code>${String(s.id).substring(0,8)}…</code></td>
+            <td>${escapeHtml(s.template_name || 'Unknown')}</td>
+            <td>${escapeHtml(s.device_slug || '—')}</td>
+            <td>${new Date(s.send_at).toLocaleString()}</td>
+            <td><span class="badge ${cls}">${txt}</span></td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteJsSchedule('${s.id}')">Del</button>
+            </td>
+        </tr>`;
+    }
+    tbody.innerHTML = rows;
+}
+
+async function deleteJsSchedule(id) {
+    if (!confirm('Delete this scheduled JS inject?')) return;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: sbHeaders({ 'Prefer': 'return=minimal' })
+        });
+        if (!res.ok) throw new Error();
+        loadJsSchedules();
+    } catch (e) { alert('Error deleting schedule'); }
+}
+
+// ------------------- SCHEDULES (overlay templates) -------------------
 async function loadSchedules() {
     try {
         const res = await fetch('/api/schedules');
@@ -611,11 +838,14 @@ function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, func
 // ------------------- REALTIME -------------------
 sbClient.channel('device-state-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'device_state' }, () => refreshDeviceState()).subscribe();
 sbClient.channel('schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => loadSchedules()).subscribe();
+sbClient.channel('js-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'js_schedules' }, () => loadJsSchedules()).subscribe();
+sbClient.channel('js-templates-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'js_templates' }, () => loadJsTemplates()).subscribe();
 
 // ------------------- BOOT -------------------
 loadTemplates();
 loadJsTemplates();
 loadSchedules();
+loadJsSchedules();
 refreshDeviceState();
 setInterval(refreshDeviceState, 15000);
 setInterval(loadSchedules, 30000);
