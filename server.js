@@ -1132,7 +1132,7 @@ app.put('/api/overlay/update/:id', async (req, res) => {
 //     } catch (error) {
 //         res.status(500).json({ error: error.message });
 //     }
-});
+// });
 
 // Helper to extract placeholders from JS code
 function findPlaceholdersInJs(jsCode) {
