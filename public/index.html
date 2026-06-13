@@ -26,6 +26,43 @@
         h1 {
             margin-bottom: 20px;
         }
+
+        /* Top nav tabs - links to every page in /public */
+        .page-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .page-nav a {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #16213e;
+            border: 1px solid #0f3460;
+            border-radius: 30px;
+            color: #ccd6f6;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .page-nav a:hover {
+            border-color: #e94560;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+
+        .page-nav a.current {
+            background: #e94560;
+            color: #fff;
+            border-color: #e94560;
+        }
         
         .cards {
             display: grid;
@@ -117,7 +154,19 @@
 <body>
     <div class="container">
         <h1>🎬 StreamStudio Admin</h1>
-        <p>Manage your RTMP overlays and schedules</p>
+        <p style="margin-bottom: 20px; color:#aaa;">Manage your RTMP overlays and schedules</p>
+
+        <!-- Nav tabs: link to every page in /public -->
+        <nav class="page-nav">
+            <a href="/index.html" class="current">🏠 Admin Home</a>
+            <a href="/about.html">ℹ️ About</a>
+            <a href="/designer.html">🎨 Overlay Designer</a>
+            <a href="/schedules.html">📅 Schedule Manager</a>
+            <a href="/streamstats.html">📊 Analytics</a>
+            <a href="/admin-inject.html">🧩 JS Injector</a>
+            <a href="/overlay.html">🖥️ Live Overlay</a>
+            <a href="/streaming_scene.html">📡 Streaming Scene</a>
+        </nav>
         
         <div class="cards">
             <a href="/designer.html" class="card">
@@ -139,6 +188,34 @@
                 <h2>Analytics</h2>
                 <p>View overlay performance, schedule logs, and trigger history</p>
                 <div class="status-badge">Live</div>
+            </a>
+
+            <a href="/admin-inject.html" class="card">
+                <div class="emoji">🧩</div>
+                <h2>JS Injector</h2>
+                <p>Build and send JS overlay payloads directly to a connected device</p>
+                <div class="status-badge">Live</div>
+            </a>
+
+            <a href="/overlay.html" class="card">
+                <div class="emoji">🖥️</div>
+                <h2>Live Overlay</h2>
+                <p>Transparent overlay view used inside the Android WebView</p>
+                <div class="status-badge">Device</div>
+            </a>
+
+            <a href="/streaming_scene.html" class="card">
+                <div class="emoji">📡</div>
+                <h2>Streaming Scene</h2>
+                <p>In-stream control panel: chat, alerts, bitrate, mic &amp; camera</p>
+                <div class="status-badge">Device</div>
+            </a>
+
+            <a href="/about.html" class="card">
+                <div class="emoji">ℹ️</div>
+                <h2>About</h2>
+                <p>Stream Studio landing page — RTMP relay with overlay injection</p>
+                <div class="status-badge">Info</div>
             </a>
         </div>
         
