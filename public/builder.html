@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overlay Builder - StreamStudio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar - Form Editor */
+        .sidebar {
+            width: 380px;
+            background: #16213e;
+            border-right: 1px solid #0f3460;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background: #0f3460;
+            border-bottom: 1px solid #1a5276;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-header input, .sidebar-header textarea {
+            width: 100%;
+            padding: 8px 12px;
+            background: #0f3460;
+            border: 1px solid #1a5276;
+            color: #eee;
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        
+        .elements-list {
+            flex: 1;
+            padding: 20px;
+        }
+        
+        .element-card {
+            background: #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #1a5276;
+        }
+        
+        .element-card:hover {
+            background: #1a5276;
+            transform: translateX(4px);
+        }
+        
+        .element-card.selected {
+            border-color: #e94560;
+            background: #1a5276;
+        }
+        
+        .element-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .element-type {
+            font-weight: bold;
+            color: #e94560;
+        }
+        
+        .element-remove {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .element-preview {
+            font-size: 12px;
+            color: #aaa;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .add-element-btn {
+            width: 100%;
+            padding: 10px;
+            background: #e94560;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .add-element-btn:hover {
+            background: #ff6b6b;
+        }
+        
+        /* Element Editor Panel */
+        .editor-panel {
+            background: #0f3460;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        
+        .editor-panel.show {
+            display: block;
+        }
+        
+        .editor-panel h3 {
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .editor-panel input, .editor-panel select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            background: #16213e;
+            border: 1px solid #1a5276;
+            color: #eee;
+            border-radius: 4px;
+        }
+        
+        .editor-panel label {
+            font-size: 12px;
+            display: block;
+            margin-bottom: 4px;
+            color: #aaa;
+        }
+        
+        /* Preview Area */
+        .preview-area {
+            flex: 1;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .preview-toolbar {
+            padding: 10px 20px;
+            background: #16213e;
+            border-bottom: 1px solid #0f3460;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .preview-toolbar button {
+            padding: 8px 16px;
+            background: #0f3460;
+            border: none;
+            color: #eee;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .preview-toolbar button.primary {
+            background: #e94560;
+        }
+        
+        .preview-toolbar button.success {
+            background: #00b894;
+        }
+        
+        .preview-frame {
+            flex: 1;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .preview-frame iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #000;
+        }
+        
+        .json-editor {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 500px;
+            background: #16213e;
+            border-radius: 8px;
+            border: 1px solid #e94560;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 100;
+        }
+        
+        .json-editor.show {
+            display: block;
+        }
+        
+        .json-editor-header {
+            padding: 10px;
+            background: #0f3460;
+            display: flex;
+            justify-content: space-between;
+            cursor: move;
+        }
+        
+        .json-editor textarea {
+            width: 100%;
+            height: 300px;
+            background: #0a0a0a;
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            border: none;
+        }
+        
+        .status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 8px 16px;
+            background: #00b894;
+            border-radius: 20px;
+            font-size: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>🎨 Overlay Builder</h1>
+                <input type="text" id="templateName" placeholder="Template Name">
+                <textarea id="templateDesc" placeholder="Description" rows="2"></textarea>
+            </div>
+            
+            <div class="elements-list">
+                <button class="add-element-btn" onclick="addElement()">+ Add Element</button>
+                <div id="elementsContainer"></div>
+                
+                <div id="editorPanel" class="editor-panel">
+                    <h3>✏️ Edit Element</h3>
+                    <div id="elementEditor"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Preview Area -->
+        <div class="preview-area">
+            <div class="preview-toolbar">
+                <button onclick="updatePreview()">🔄 Refresh Preview</button>
+                <button class="primary" onclick="showJsonEditor()">📝 JSON Editor</button>
+                <button class="success" onclick="saveTemplate()">💾 Save to Supabase</button>
+            </div>
+            <div class="preview-frame">
+                <iframe id="previewIframe"></iframe>
+            </div>
+        </div>
+        
+        <!-- JSON Editor Modal -->
+        <div id="jsonEditor" class="json-editor">
+            <div class="json-editor-header">
+                <span>JSON Configuration</span>
+                <button onclick="hideJsonEditor()">✕</button>
+            </div>
+            <textarea id="jsonConfig" placeholder='{"name": "My Overlay", "elements": []}'></textarea>
+            <div style="padding: 10px;">
+                <button onclick="applyJsonConfig()">Apply & Preview</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="status" class="status"></div>
+    
+    <script>
+        // Current overlay configuration
+        let currentConfig = {
+            name: "New Overlay",
+            width: 1920,
+            height: 1080,
+            background: "transparent",
+            durationSeconds: 10,
+            elements: []
+        };
+        
+        let selectedElementIndex = -1;
+        
+        // Element type templates
+        const elementTemplates = {
+            image: { type: "image", src: "https://via.placeholder.com/200x100/ff4444/white?text=Logo", position: "top-left", width: 150, opacity: 1, alt: "Logo" },
+            text: { type: "text", content: "Live Stream Title", fontSize: 24, color: "#ffffff", fontWeight: "bold", position: "bottom-left", textAlign: "left", textShadow: "2px 2px 4px rgba(0,0,0,0.5)" },
+            video: { type: "video", src: "https://www.w3schools.com/html/mov_bbb.mp4", position: "center", width: 320, height: 180, loop: true },
+            social: { type: "social", platform: "youtube", username: "streamstudio", position: "top-right" },
+            shape: { type: "shape", color: "#e94560", width: 200, height: 4, position: "bottom-center", borderRadius: 2 },
+            countdown: { type: "countdown", durationSeconds: 60, fontSize: 48, color: "#ffffff", position: "center" },
+            marquee: { type: "marquee", content: "🎬 Live Now! Subscribe for more!", fontSize: 20, color: "#ffffff", durationSeconds: 10, position: "bottom-center" }
+        };
+        
+        function addElement(type = null) {
+            if (!type) {
+                // Show quick picker
+                const types = Object.keys(elementTemplates);
+                const typeList = types.join(', ');
+                type = prompt(`Element type? (${typeList})`, "text");
+                if (!type || !elementTemplates[type]) {
+                    alert("Invalid type");
+                    return;
+                }
+            }
+            
+            const newElement = JSON.parse(JSON.stringify(elementTemplates[type]));
+            newElement.zIndex = currentConfig.elements.length + 1;
+            currentConfig.elements.push(newElement);
+            renderElementsList();
+            updatePreview();
+            showStatus(`Added ${type} element`);
+        }
+        
+        function removeElement(index) {
+            currentConfig.elements.splice(index, 1);
+            if (selectedElementIndex === index) {
+                selectedElementIndex = -1;
+                document.getElementById('editorPanel').classList.remove('show');
+            } else if (selectedElementIndex > index) {
+                selectedElementIndex--;
+            }
+            renderElementsList();
+            updatePreview();
+            showStatus("Element removed");
+        }
+        
+        function selectElement(index) {
+            selectedElementIndex = index;
+            renderElementsList();
+            showElementEditor(index);
+            document.getElementById('editorPanel').classList.add('show');
+        }
+        
+        function showElementEditor(index) {
+            const el = currentConfig.elements[index];
+            const editorDiv = document.getElementById('elementEditor');
+            
+            let html = `
+                <label>Type</label>
+                <select id="el_type" onchange="updateElementProperty(${index}, 'type', this.value)">
+                    <option value="image" ${el.type === 'image' ? 'selected' : ''}>Image</option>
+                    <option value="text" ${el.type === 'text' ? 'selected' : ''}>Text</option>
+                    <option value="video" ${el.type === 'video' ? 'selected' : ''}>Video</option>
+                    <option value="social" ${el.type === 'social' ? 'selected' : ''}>Social</option>
+                    <option value="shape" ${el.type === 'shape' ? 'selected' : ''}>Shape</option>
+                    <option value="countdown" ${el.type === 'countdown' ? 'selected' : ''}>Countdown</option>
+                    <option value="marquee" ${el.type === 'marquee' ? 'selected' : ''}>Marquee</option>
+                </select>
+                
+                <label>Position</label>
+                <select id="el_position" onchange="updateElementProperty(${index}, 'position', this.value)">
+                    <option value="top-left" ${el.position === 'top-left' ? 'selected' : ''}>Top Left</option>
+                    <option value="top-center" ${el.position === 'top-center' ? 'selected' : ''}>Top Center</option>
+                    <option value="top-right" ${el.position === 'top-right' ? 'selected' : ''}>Top Right</option>
+                    <option value="middle-left" ${el.position === 'middle-left' ? 'selected' : ''}>Middle Left</option>
+                    <option value="center" ${el.position === 'center' ? 'selected' : ''}>Center</option>
+                    <option value="middle-right" ${el.position === 'middle-right' ? 'selected' : ''}>Middle Right</option>
+                    <option value="bottom-left" ${el.position === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
+                    <option value="bottom-center" ${el.position === 'bottom-center' ? 'selected' : ''}>Bottom Center</option>
+                    <option value="bottom-right" ${el.position === 'bottom-right' ? 'selected' : ''}>Bottom Right</option>
+                    <option value="lower-third" ${el.position === 'lower-third' ? 'selected' : ''}>Lower Third</option>
+                </select>
+            `;
+            
+            // Type-specific fields
+            if (el.type === 'image') {
+                html += `
+                    <label>Image URL</label>
+                    <input id="el_src" value="${el.src || ''}" onchange="updateElementProperty(${index}, 'src', this.value)">
+                    <label>Width (px)</label>
+                    <input type="number" id="el_width" value="${el.width || 150}" onchange="updateElementProperty(${index}, 'width', parseInt(this.value))">
+                `;
+            } else if (el.type === 'text') {
+                html += `
+                    <label>Content</label>
+                    <input id="el_content" value="${el.content || ''}" onchange="updateElementProperty(${index}, 'content', this.value)">
+                    <label>Font Size (px)</label>
+                    <input type="number" id="el_fontSize" value="${el.fontSize || 24}" onchange="updateElementProperty(${index}, 'fontSize', parseInt(this.value))">
+                    <label>Color</label>
+                    <input type="color" id="el_color" value="${el.color || '#ffffff'}" onchange="updateElementProperty(${index}, 'color', this.value)">
+                `;
+            } else if (el.type === 'social') {
+                html += `
+                    <label>Platform</label>
+                    <select id="el_platform" onchange="updateElementProperty(${index}, 'platform', this.value)">
+                        <option value="youtube" ${el.platform === 'youtube' ? 'selected' : ''}>YouTube</option>
+                        <option value="twitch" ${el.platform === 'twitch' ? 'selected' : ''}>Twitch</option>
+                        <option value="tiktok" ${el.platform === 'tiktok' ? 'selected' : ''}>TikTok</option>
+                        <option value="instagram" ${el.platform === 'instagram' ? 'selected' : ''}>Instagram</option>
+                        <option value="twitter" ${el.platform === 'twitter' ? 'selected' : ''}>Twitter/X</option>
+                    </select>
+                    <label>Username</label>
+                    <input id="el_username" value="${el.username || ''}" onchange="updateElementProperty(${index}, 'username', this.value)">
+                `;
+            }
+            
+            html += `
+                <label>Animation</label>
+                <select id="el_animation" onchange="updateElementProperty(${index}, 'animation', this.value)">
+                    <option value="">None</option>
+                    <option value="fadeIn" ${el.animation === 'fadeIn' ? 'selected' : ''}>Fade In</option>
+                    <option value="slideUp" ${el.animation === 'slideUp' ? 'selected' : ''}>Slide Up</option>
+                    <option value="slideLeft" ${el.animation === 'slideLeft' ? 'selected' : ''}>Slide Left</option>
+                    <option value="pulse" ${el.animation === 'pulse' ? 'selected' : ''}>Pulse</option>
+                    <option value="bounce" ${el.animation === 'bounce' ? 'selected' : ''}>Bounce</option>
+                </select>
+                <label>Animation Duration (s)</label>
+                <input type="number" step="0.1" id="el_animationDuration" value="${el.animationDuration || 0.5}" onchange="updateElementProperty(${index}, 'animationDuration', parseFloat(this.value))">
+            `;
+            
+            editorDiv.innerHTML = html;
+        }
+        
+        function updateElementProperty(index, prop, value) {
+            currentConfig.elements[index][prop] = value;
+            updatePreview();
+        }
+        
+        function renderElementsList() {
+            const container = document.getElementById('elementsContainer');
+            let html = '';
+            
+            currentConfig.elements.forEach((el, i) => {
+                const preview = el.type === 'text' ? el.content : (el.type === 'social' ? `${el.platform}: @${el.username}` : el.type);
+                html += `
+                    <div class="element-card ${selectedElementIndex === i ? 'selected' : ''}" onclick="selectElement(${i})">
+                        <div class="element-header">
+                            <span class="element-type">${el.type.toUpperCase()}</span>
+                            <button class="element-remove" onclick="event.stopPropagation(); removeElement(${i})">🗑️</button>
+                        </div>
+                        <div class="element-preview">${preview}</div>
+                    </div>
+                `;
+            });
+            
+            if (currentConfig.elements.length === 0) {
+                html = '<div style="text-align: center; color: #666; padding: 40px;">Click + Add Element to start building your overlay</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        async function updatePreview() {
+            const config = {
+                name: document.getElementById('templateName').value || "My Overlay",
+                elements: currentConfig.elements,
+                durationSeconds: 10
+            };
+            
+            try {
+                const response = await fetch('/api/preview-overlay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config })
+                });
+                
+                const html = await response.text();
+                const iframe = document.getElementById('previewIframe');
+                iframe.srcdoc = html;
+            } catch (error) {
+                console.error('Preview error:', error);
+            }
+        }
+        
+        async function saveTemplate() {
+            const name = document.getElementById('templateName').value;
+            if (!name) {
+                alert('Please enter a template name');
+                return;
+            }
+            
+            const config = {
+                name: name,
+                elements: currentConfig.elements,
+                durationSeconds: 10,
+                width: 1920,
+                height: 1080,
+                background: 'transparent'
+            };
+            
+            showStatus('Saving template...');
+            
+            try {
+                const response = await fetch('/api/template-from-json', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        description: document.getElementById('templateDesc').value,
+                        config: config
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus('✅ Template saved successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showStatus('❌ Error: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Save failed: ' + error.message, 'error');
+            }
+        }
+        
+        function showJsonEditor() {
+            const editor = document.getElementById('jsonEditor');
+            const textarea = document.getElementById('jsonConfig');
+            textarea.value = JSON.stringify(currentConfig, null, 2);
+            editor.classList.add('show');
+        }
+        
+        function hideJsonEditor() {
+            document.getElementById('jsonEditor').classList.remove('show');
+        }
+        
+        function applyJsonConfig() {
+            try {
+                const json = JSON.parse(document.getElementById('jsonConfig').value);
+                currentConfig = json;
+                renderElementsList();
+                updatePreview();
+                hideJsonEditor();
+                showStatus('JSON config applied');
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+        
+        function showStatus(msg, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = msg;
+            statusDiv.style.display = 'block';
+            statusDiv.style.background = type === 'error' ? '#e94560' : '#00b894';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Load from URL param if editing existing template
+        const urlParams = new URLSearchParams(window.location.search);
+        const templateId = urlParams.get('id');
+        if (templateId) {
+            fetch(`/api/template/${templateId}/json`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.config) {
+                        currentConfig = data.config;
+                        document.getElementById('templateName').value = data.name;
+                        document.getElementById('templateDesc').value = data.description || '';
+                        renderElementsList();
+                        updatePreview();
+                    }
+                });
+        } else {
+            // Add default demo elements
+            addElement('text');
+            addElement('social');
+            addElement('shape');
+            updatePreview();
+        }
+    </script>
+</body>
+</html>

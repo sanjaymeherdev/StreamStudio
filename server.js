@@ -441,7 +441,313 @@ setInterval(async () => {
         // Silent fail - will retry next minute
     }
 }, 60 * 1000) // Every 60 seconds
+// ============================================
+// JSON TO HTML CONVERTER (Overlay Builder)
+// ============================================
 
+// Convert JSON config to HTML/CSS/JS
+function jsonToOverlay(config) {
+    const { name, width = 1920, height = 1080, background = 'transparent', elements = [] } = config
+    
+    let css = `
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            width: 100vw; 
+            height: 100vh; 
+            background: ${background};
+            position: relative;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .overlay-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+    `
+    
+    let html = '<div class="overlay-container">'
+    let js = `
+        // Animation controller
+        let elements = [];
+        
+        function fadeIn(el, duration) {
+            el.style.opacity = '0';
+            el.style.transition = 'opacity ' + duration + 'ms';
+            setTimeout(() => el.style.opacity = '1', 50);
+        }
+        
+        function fadeOut(el, duration, callback) {
+            el.style.transition = 'opacity ' + duration + 'ms';
+            el.style.opacity = '0';
+            setTimeout(callback, duration);
+        }
+    `
+    
+    elements.forEach((el, idx) => {
+        const elementId = `el_${idx}`
+        let elementCss = `#${elementId} { position: absolute; `
+        
+        // Position handling
+        const positions = {
+            'top-left': { top: '20px', left: '20px', transform: 'none' },
+            'top-center': { top: '20px', left: '50%', transform: 'translateX(-50%)' },
+            'top-right': { top: '20px', right: '20px', transform: 'none' },
+            'middle-left': { top: '50%', left: '20px', transform: 'translateY(-50%)' },
+            'center': { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+            'middle-right': { top: '50%', right: '20px', transform: 'translateY(-50%)' },
+            'bottom-left': { bottom: '20px', left: '20px', transform: 'none' },
+            'bottom-center': { bottom: '20px', left: '50%', transform: 'translateX(-50%)' },
+            'bottom-right': { bottom: '20px', right: '20px', transform: 'none' },
+            'lower-third': { bottom: '80px', left: '20px', transform: 'none' }
+        }
+        
+        const pos = positions[el.position] || positions['bottom-left']
+        Object.assign(elementCss, pos)
+        
+        if (el.width) elementCss += `width: ${el.width}px; `
+        if (el.height) elementCss += `height: ${el.height}px; `
+        if (el.opacity) elementCss += `opacity: ${el.opacity}; `
+        if (el.rotation) elementCss += `transform: rotate(${el.rotation}deg); `
+        
+        elementCss += `z-index: ${el.zIndex || 10}; }`
+        
+        // Animation CSS
+        if (el.animation) {
+            elementCss += `
+                #${elementId} {
+                    animation: ${el.animation} ${el.animationDuration || 1}s ${el.animationDelay || 0}s;
+                }
+            `
+            
+            if (el.animation === 'fadeIn') {
+                css += `
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                `
+            } else if (el.animation === 'slideUp') {
+                css += `
+                    @keyframes slideUp {
+                        from { transform: translateY(100px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                `
+            } else if (el.animation === 'slideLeft') {
+                css += `
+                    @keyframes slideLeft {
+                        from { transform: translateX(100px); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `
+            } else if (el.animation === 'pulse') {
+                css += `
+                    @keyframes pulse {
+                        0% { transform: scale(1); }
+                        50% { transform: scale(1.05); }
+                        100% { transform: scale(1); }
+                    }
+                `
+            } else if (el.animation === 'bounce') {
+                css += `
+                    @keyframes bounce {
+                        0%, 100% { transform: translateY(0); }
+                        50% { transform: translateY(-20px); }
+                    }
+                `
+            }
+        }
+        
+        css += elementCss
+        
+        // HTML element
+        switch(el.type) {
+            case 'image':
+                html += `<img id="${elementId}" src="${el.src}" alt="${el.alt || ''}" style="object-fit: ${el.objectFit || 'contain'}">`
+                break
+            case 'text':
+                html += `<div id="${elementId}" style="color: ${el.color || '#ffffff'}; font-size: ${el.fontSize || 24}px; font-weight: ${el.fontWeight || 'normal'}; text-align: ${el.textAlign || 'center'}; text-shadow: ${el.textShadow || '2px 2px 4px rgba(0,0,0,0.5)'}">${el.content || 'Text'}</div>`
+                break
+            case 'video':
+                html += `<video id="${elementId}" src="${el.src}" autoplay loop muted style="object-fit: ${el.objectFit || 'cover'}" ${el.loop ? 'loop' : ''}>`
+                break
+            case 'social':
+                const socialHtml = getSocialHtml(el.platform, el.username, elementId)
+                html += socialHtml
+                break
+            case 'shape':
+                html += `<div id="${elementId}" style="background: ${el.color || '#ffffff'}; border-radius: ${el.borderRadius || 0}px; border: ${el.borderWidth || 0}px solid ${el.borderColor || '#000'}"></div>`
+                break
+            case 'countdown':
+                html += `<div id="${elementId}" style="color: ${el.color || '#ffffff'}; font-size: ${el.fontSize || 48}px; font-weight: bold; text-align: center;">--:--:--</div>`
+                js += `
+                    (function() {
+                        let targetTime = Date.now() + (${el.durationSeconds || 60} * 1000);
+                        let countdownEl = document.getElementById('${elementId}');
+                        function updateCountdown() {
+                            let remaining = Math.max(0, targetTime - Date.now());
+                            let hours = Math.floor(remaining / 3600000);
+                            let minutes = Math.floor((remaining % 3600000) / 60000);
+                            let seconds = Math.floor((remaining % 60000) / 1000);
+                            countdownEl.textContent = \`\${hours.toString().padStart(2,'0')}:\${minutes.toString().padStart(2,'0')}:\${seconds.toString().padStart(2,'0')}\`;
+                            if(remaining > 0) setTimeout(updateCountdown, 1000);
+                        }
+                        updateCountdown();
+                    })();
+                `
+                break
+            case 'marquee':
+                html += `<div id="${elementId}" style="white-space: nowrap; overflow: hidden; color: ${el.color || '#ffffff'}; font-size: ${el.fontSize || 20}px;">
+                            <span style="display: inline-block; animation: marquee ${el.durationSeconds || 10}s linear infinite;">${el.content || 'Scrolling text...'}</span>
+                         </div>`
+                css += `
+                    @keyframes marquee {
+                        from { transform: translateX(100%); }
+                        to { transform: translateX(-100%); }
+                    }
+                `
+                break
+            default:
+                html += `<div id="${elementId}">Unknown element</div>`
+        }
+    })
+    
+    html += '</div>'
+    
+    function getSocialHtml(platform, username, elementId) {
+        const icons = {
+            youtube: '▶️',
+            twitch: '🎮',
+            tiktok: '🎵',
+            instagram: '📷',
+            twitter: '🐦',
+            facebook: '👍',
+            discord: '💬'
+        }
+        const icon = icons[platform] || '💬'
+        return `<div id="${elementId}" style="display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 50px; backdrop-filter: blur(10px);">
+                    <span style="font-size: 24px;">${icon}</span>
+                    <span style="color: white; font-size: 16px;">@${username}</span>
+                    <span style="color: #ff4444; font-size: 14px;">LIVE</span>
+                </div>`
+    }
+    
+    const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>${css}</style>
+</head>
+<body>
+    ${html}
+    <script>
+        ${js}
+        
+        // Auto-hide if duration set
+        const DURATION = ${config.durationSeconds || 0};
+        if(DURATION > 0) {
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.3s';
+                document.body.style.opacity = '0';
+                setTimeout(() => {
+                    if(window.Android?.overlayComplete) window.Android.overlayComplete();
+                }, 300);
+            }, DURATION * 1000);
+        }
+        
+        function onStreamState(isLive) {
+            console.log('Stream live:', isLive);
+            if(typeof window.streamStateChanged === 'function') window.streamStateChanged(isLive);
+        }
+    </script>
+</body>
+</html>`
+    
+    return {
+        html: fullHtml,
+        css: css,
+        js: js
+    }
+}
+
+// Create template from JSON config
+app.post('/api/template-from-json', async (req, res) => {
+    try {
+        const { name, description, config } = req.body
+        
+        if (!config || !config.elements) {
+            return res.status(400).json({ error: 'Invalid config: missing elements' })
+        }
+        
+        const overlay = jsonToOverlay(config)
+        
+        // Save to templates table
+        const { data, error } = await supabase
+            .from('templates')
+            .insert([{
+                name: name,
+                description: description || '',
+                html_content: overlay.html,
+                css_content: overlay.css,
+                js_content: overlay.js,
+                thumbnail_url: config.thumbnail || null,
+                is_active: true
+            }])
+            .select()
+            .single()
+        
+        if (error) throw error
+        
+        res.json({ 
+            success: true, 
+            template: data,
+            preview: overlay.html
+        })
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
+
+// Preview JSON config (without saving)
+app.post('/api/preview-overlay', async (req, res) => {
+    try {
+        const { config } = req.body
+        const overlay = jsonToOverlay(config)
+        res.setHeader('Content-Type', 'text/html')
+        res.send(overlay.html)
+    } catch (error) {
+        res.status(500).send(`<h1>Error</h1><p>${error.message}</p>`)
+    }
+})
+
+// Get template as JSON config
+app.get('/api/template/:id/json', async (req, res) => {
+    try {
+        const { data: template, error } = await supabase
+            .from('templates')
+            .select('*')
+            .eq('id', req.params.id)
+            .single()
+        
+        if (error) throw error
+        
+        // This is simplified - ideally you'd store the original JSON
+        // For now, return a basic structure
+        res.json({
+            id: template.id,
+            name: template.name,
+            description: template.description,
+            config: {
+                name: template.name,
+                elements: extractElementsFromHtml(template.html_content) // You'll need this helper
+            }
+        })
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
+})
 // ============================================
 // START SERVER
 // ============================================
