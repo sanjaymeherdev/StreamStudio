@@ -440,116 +440,6 @@ function renderOverlayHTML(design) {
 </body>
 </html>`;
 }
-// ============================================
-// SCHEDULE CRUD
-// ============================================
-async function triggerDueSchedules() {
-    const checkTime = new Date().toISOString();
-    console.log('[scheduler] 🔍 Checking due schedules at', checkTime);
-    
-    const { data: dueSchedules, error } = await supabase
-        .from('schedules')
-        .select('*')
-        .eq('is_active', true)
-        .lte('start_datetime', checkTime)
-        .or(`end_datetime.is.null,end_datetime.gte.${checkTime}`);
-    
-    if (error) {
-        console.error('[scheduler] ❌ Query error:', error.message);
-        return { triggered: 0, error: error.message };
-    }
-    
-    console.log('[scheduler] Found', dueSchedules?.length || 0, 'due schedules');
-    
-    let triggered = 0;
-    
-    for (const schedule of dueSchedules || []) {
-        console.log('[scheduler] Processing schedule:', schedule.id, 'duration:', schedule.duration_seconds, 'seconds');
-        
-        // Check repeat limit
-        const { count, error: countError } = await supabase
-            .from('schedule_logs')
-            .select('*', { count: 'exact', head: true })
-            .eq('schedule_id', schedule.id)
-            .eq('status', 'completed');
-        
-        if (countError) {
-            console.log('[scheduler] ⚠️ Count error for schedule', schedule.id, ':', countError.message);
-            continue;
-        }
-        
-        if (count >= schedule.repeat_qty) {
-            console.log('[scheduler] ⏭️ Skipping schedule', schedule.id, '- repeat limit reached');
-            continue;
-        }
-        
-        try {
-            const { data: template, error: templateError } = await supabase
-                .from('templates')
-                .select('*')
-                .eq('id', schedule.template_id)
-                .single();
-            
-            if (templateError || !template) {
-                console.log('[scheduler] ❌ Template not found:', schedule.template_id);
-                continue;
-            }
-            
-            console.log('[scheduler] ✓ Found template:', template.name);
-            
-            const overlayUrl = `${SELF_URL}/api/overlay/${schedule.template_id}`;
-            
-            // CRITICAL FIX: Use the duration from schedule
-            const overlayUntil = new Date(Date.now() + (schedule.duration_seconds * 1000)).toISOString();
-            console.log('[scheduler] Overlay will expire at:', overlayUntil);
-            
-            const { error: updateError } = await supabase
-                .from('device_state')
-                .update({
-                    template_id: schedule.template_id,
-                    active_url: overlayUrl,
-                    overlay_active_until: overlayUntil,
-                    updated_at: new Date()
-                })
-                .eq('device_id', schedule.device_id);
-            
-            if (updateError) {
-                console.log('[scheduler] ❌ Failed to update device_state:', updateError.message);
-                throw updateError;
-            }
-            
-            await supabase
-                .from('schedule_logs')
-                .insert([{
-                    schedule_id: schedule.id,
-                    template_id: schedule.template_id,
-                    device_id: schedule.device_id,
-                    status: 'completed',
-                    repeat_count: count + 1,
-                    duration_seconds: schedule.duration_seconds
-                }]);
-            
-            triggered++;
-            console.log(`[scheduler] ✅ Triggered: "${template.name}" on ${schedule.device_id} for ${schedule.duration_seconds} seconds`);
-            
-        } catch (err) {
-            console.error(`[scheduler] ❌ Failed schedule ${schedule.id}:`, err.message);
-            await supabase
-                .from('schedule_logs')
-                .insert([{
-                    schedule_id: schedule.id,
-                    template_id: schedule.template_id,
-                    device_id: schedule.device_id,
-                    status: 'failed',
-                    error_message: err.message,
-                    duration_seconds: schedule.duration_seconds
-                }]);
-        }
-    }
-    
-    console.log('[scheduler] 📊 Summary - Triggered:', triggered, 'at', new Date().toISOString());
-    return { triggered, checked_at: new Date().toISOString() };
-}
 
 app.get('/api/schedules', async (req, res) => {
     try {
@@ -687,7 +577,7 @@ async function triggerDueSchedules() {
             
             console.log('[scheduler] ✓ Found template:', template.name);
             
-            const overlayUrl = `${SELF_URL}/api/overlay/${schedule.template_id}`;
+           const overlayUrl = `${SELF_URL}/api/overlay/${template_id}?duration=${duration_seconds}`
             
             const { error: updateError } = await supabase
                 .from('device_state')
@@ -784,7 +674,7 @@ app.post('/api/trigger-now', async (req, res) => {
         
         if (error || !template) throw new Error('Template not found')
         
-        const overlayUrl = `${SELF_URL}/api/overlay/${template_id}`
+        const overlayUrl = `${SELF_URL}/api/overlay/${template_id}?duration=${duration_seconds}`
         
         await supabase
             .from('device_state')
