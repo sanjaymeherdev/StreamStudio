@@ -80,6 +80,7 @@
         .empty-state h3 { margin-bottom: 8px; color: #a0aec0; font-weight: 500; }
         code { background: #0f3460; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-family: monospace; }
 
+        .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .section-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#e94560; color:#fff; font-size:12px; font-weight:800; flex-shrink:0; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         @media (max-width: 700px) {
@@ -127,7 +128,9 @@
 
         <div class="panel">
             <h2>🔗 Push URL to Device</h2>
-            <p class="hint">Instantly set <code>active_url</code> on <code>device_state</code>.</p>
+            <p class="hint">
+                Instantly set <code>active_url</code> on <code>device_state</code> — the device will load whatever URL you enter.
+            </p>
             <div class="url-row">
                 <div class="form-group">
                     <label>Device ID</label>
@@ -148,8 +151,13 @@
 
     <!-- TAB 2: JS INJECT -->
     <div id="tab-js" class="tab-panel">
+
         <div class="panel">
             <h2><span class="section-num">1</span> Run Existing JS Now</h2>
+            <p class="hint">
+                Pick a saved JS template (file-based or custom), fill any <code>{{placeholders}}</code>, and send it
+                straight to <code>overlay_injects</code> via Supabase Realtime.
+            </p>
             <div class="form-group">
                 <label>JS Template</label>
                 <select id="runJsSelect" onchange="onRunJsChange()">
@@ -167,6 +175,10 @@
 
         <div class="panel">
             <h2><span class="section-num">2</span> Schedule JS Inject</h2>
+            <p class="hint">
+                Pick a template, fill placeholders, choose a date &amp; time — it will be saved to
+                <code>js_schedules</code> and sent automatically.
+            </p>
             <div class="form-group">
                 <label>JS Template</label>
                 <select id="scheduleJsSelect" onchange="onScheduleJsChange()">
@@ -190,16 +202,25 @@
             </div>
             <button class="btn btn-primary" onclick="scheduleJsInject()">⏰ Schedule</button>
             <div class="status-msg" id="jsSchedStatus"></div>
+
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Template</th><th>Device Slug</th><th>Send At</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody id="jsScheduleTableBody"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+                    <thead>
+                        <tr><th>Template</th><th>Device Slug</th><th>Send At</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="jsScheduleTableBody">
+                        <tr><td colspan="5" class="empty-state"><h3>Loading…</h3></td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
 
         <div class="panel">
             <h2><span class="section-num">3</span> Create JS Template</h2>
+            <p class="hint">
+                Write JS that calls <code>renderTemplate(...)</code>. Use <code>{{placeholder}}</code> tokens for any
+                values you want to fill in later. Once saved, this template appears in the dropdowns above.
+            </p>
             <div class="form-group">
                 <label>Template Name</label>
                 <input type="text" id="newTplName" placeholder="e.g. lower-third-name">
@@ -215,11 +236,15 @@
 
     <!-- TAB 3: TEMPLATES -->
     <div id="tab-templates" class="tab-panel">
+
         <div class="panel">
             <h2><span class="section-num">1</span> Load Template to Stream</h2>
+            <p class="hint">Select an overlay template and push it to the device right now.</p>
             <div class="form-group">
                 <label>Template</label>
-                <select id="loadTplSelect"><option value="">Loading templates…</option></select>
+                <select id="loadTplSelect">
+                    <option value="">Loading templates…</option>
+                </select>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -237,9 +262,12 @@
 
         <div class="panel">
             <h2><span class="section-num">2</span> Schedule Template</h2>
+            <p class="hint">Select a template, choose a date &amp; time, and it will be triggered automatically.</p>
             <div class="form-group">
                 <label>Template</label>
-                <select id="schedTplSelect"><option value="">Loading templates…</option></select>
+                <select id="schedTplSelect">
+                    <option value="">Loading templates…</option>
+                </select>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -266,14 +294,18 @@
         </div>
 
         <div class="panel">
-            <div class="flex-between">
+            <div class="flex-between" style="margin-bottom:0">
                 <h2 style="margin-bottom:0">📋 Scheduled Templates</h2>
                 <button class="btn btn-secondary btn-sm" onclick="loadSchedules()">🔄 Refresh</button>
             </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Template</th><th>Device</th><th>Start</th><th>Duration</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody id="scheduleTableBody"><tr><td colspan="6" class="empty-state">Loading schedules…</td></tr></tbody>
+                    <thead>
+                        <tr><th>Template</th><th>Device</th><th>Start</th><th>Duration</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <tr><td colspan="6" class="empty-state"><h3>Loading schedules…</h3></td></tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -291,6 +323,7 @@ let overlayTemplates = [];
 let schedules = [];
 let jsSchedules = [];
 
+// ------------------- HELPERS -------------------
 function showStatus(elId, msg, isOk) {
     const el = document.getElementById(elId);
     el.textContent = msg;
@@ -315,15 +348,19 @@ function switchTab(name) {
     document.querySelectorAll('.tab')[idx].classList.add('active');
 }
 
+// ------------------- DEVICE STATE -------------------
 async function refreshDeviceState() {
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/device_state?device_id=eq.phone1`, { headers: sbHeaders() });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/device_state?device_id=eq.phone1`, {
+            headers: sbHeaders()
+        });
         const data = await res.json();
         if (data && data[0]) {
             const d = data[0];
-            document.getElementById('deviceActiveUrl').textContent = d.active_url || '/home';
+            const url = d.active_url || '/home';
+            document.getElementById('deviceActiveUrl').textContent = url;
             document.getElementById('deviceDot').className = 'dot online';
-            document.getElementById('deviceStatus').innerHTML = `🕒 Updated: ${d.updated_at ? new Date(d.updated_at).toLocaleString() : '—'}`;
+            document.getElementById('deviceStatus').innerHTML = `🕒 Updated: ${d.updated_at ? new Date(d.updated_at).toLocaleString() : '—'} ${d.overlay_active_until ? ` | ⏱️ Overlay until: ${new Date(d.overlay_active_until).toLocaleString()}` : ''}`;
         } else {
             document.getElementById('deviceActiveUrl').textContent = 'No device';
             document.getElementById('deviceDot').className = 'dot';
@@ -342,7 +379,8 @@ function updateDeviceUrl(deviceId, url, overlayUntil) {
     }).then(r => { if(!r.ok) throw new Error(); refreshDeviceState(); return r; });
 }
 
-function clearDevice() { updateDeviceUrl('phone1', '/home', null); showStatus('urlStatus', 'Cleared overlay', true); }
+function clearDevice() { updateDeviceUrl('phone1', '/home', null); showStatus('urlStatus', 'Cleared overlay, back to home', true); }
+
 function pushUrl() {
     const deviceId = document.getElementById('urlDeviceId').value.trim() || 'phone1';
     const url = document.getElementById('urlToPush').value.trim();
@@ -351,20 +389,41 @@ function pushUrl() {
     showStatus('urlStatus', `✅ URL pushed to ${deviceId}`, true);
 }
 
+// ------------------- JS TEMPLATES -------------------
 async function loadJsTemplates() {
     try {
         const res = await fetch('/api/js-templates');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         jsTemplates = await res.json();
         populateJsSelect(document.getElementById('runJsSelect'));
         populateJsSelect(document.getElementById('scheduleJsSelect'));
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        console.error('Failed to load JS templates:', e);
+        const opt = '<option value="">❌ Failed to load - check console</option>';
+        document.getElementById('runJsSelect').innerHTML = opt;
+        document.getElementById('scheduleJsSelect').innerHTML = opt;
+    }
 }
 
 function populateJsSelect(sel) {
+    const prevValue = sel.value;
     sel.innerHTML = '<option value="">Select a JS template…</option>';
+    const categories = {};
     jsTemplates.forEach(t => {
-        sel.appendChild(new Option(`${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id));
+        const cat = t.category || 'general';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(t);
     });
+    Object.keys(categories).sort().forEach(cat => {
+        const group = document.createElement('optgroup');
+        group.label = cat.charAt(0).toUpperCase() + cat.slice(1);
+        categories[cat].forEach(t => {
+            const sourceBadge = t.source === 'database' ? '🗄️' : '📁';
+            group.appendChild(new Option(`${sourceBadge} ${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id));
+        });
+        sel.appendChild(group);
+    });
+    if (prevValue && jsTemplates.some(t => t.id === prevValue)) sel.value = prevValue;
 }
 
 function findJsTemplate(id) { return jsTemplates.find(t => t.id === id) || null; }
@@ -444,20 +503,42 @@ async function loadJsSchedules() {
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?order=send_at.asc`, { headers: sbHeaders() });
         jsSchedules = await res.json();
-        const tbody = document.getElementById('jsScheduleTableBody');
-        if (!jsSchedules.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No scheduled JS injects</td></tr>'; return; }
-        let rows = '';
-        for (let s of jsSchedules) {
-            rows += `<tr><td>${escapeHtml(s.template_name)}</td><td>${escapeHtml(s.device_slug || '—')}</td><td>${new Date(s.send_at).toLocaleString()}</td><td><span class="badge ${s.sent ? 'badge-sent' : 'badge-pending'}">${s.sent ? 'Sent' : 'Pending'}</span></td><td><button class="btn btn-danger btn-sm" onclick="deleteJsSchedule('${s.id}')">Del</button></td></tr>`;
-        }
-        tbody.innerHTML = rows;
-    } catch(e) { console.error(e); }
+        renderJsScheduleTable();
+    } catch(e) {
+        console.error(e);
+        document.getElementById('jsScheduleTableBody').innerHTML = '<tr><td colspan="5" class="empty-state"><h3>⚠️ Could not load (is the js_schedules table set up?)</h3></td></tr>';
+    }
+}
+
+function renderJsScheduleTable() {
+    const tbody = document.getElementById('jsScheduleTableBody');
+    if (!jsSchedules.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><h3>📭 No scheduled JS injects</h3><p>Use "Schedule" above to add one</p></td></tr>';
+        return;
+    }
+    let rows = '';
+    for (let s of jsSchedules) {
+        const cls = s.sent ? 'badge-sent' : 'badge-pending';
+        const txt = s.sent ? 'Sent' : 'Pending';
+        rows += `<tr>
+            <td>${escapeHtml(s.template_name || 'Unknown')}</td>
+            <td>${escapeHtml(s.device_slug || '—')}</td>
+            <td>${new Date(s.send_at).toLocaleString()}</td>
+            <td><span class="badge ${cls}">${txt}</span></td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteJsSchedule('${s.id}')">Del</button></td>
+        </tr>`;
+    }
+    tbody.innerHTML = rows;
 }
 
 async function deleteJsSchedule(id) {
     if (!confirm('Delete this scheduled JS inject?')) return;
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders({ 'Prefer': 'return=minimal' }) });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?id=eq.${id}`, {
+            method: 'DELETE',
+            headers: sbHeaders({ 'Prefer': 'return=minimal' })
+        });
+        if (!res.ok) throw new Error();
         loadJsSchedules();
     } catch(e) { alert('Error deleting schedule'); }
 }
@@ -475,30 +556,41 @@ async function saveNewJsTemplate() {
     const placeholders = extractPlaceholders(code);
     try {
         const res = await fetch('/api/js-templates', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, js_code: code, placeholders, category: 'general' })
         });
         const json = await res.json();
         if (json.error) throw new Error(json.error);
-        showStatus('newTplStatus', `✅ Saved "${name}"`, true);
+        showStatus('newTplStatus', `✅ Saved "${name}" — now available in dropdowns above`, true);
         document.getElementById('newTplName').value = '';
         document.getElementById('newTplCode').value = '';
         await loadJsTemplates();
-    } catch(err) { showStatus('newTplStatus', `❌ ${err.message}`, false); }
+    } catch(err) {
+        showStatus('newTplStatus', `❌ ${err.message}`, false);
+    }
 }
 
+// ------------------- OVERLAY TEMPLATES -------------------
 async function loadOverlayTemplates() {
     try {
         const res = await fetch('/api/templates');
         overlayTemplates = await res.json();
         populateOverlaySelect(document.getElementById('loadTplSelect'));
         populateOverlaySelect(document.getElementById('schedTplSelect'));
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        console.error(e);
+        const opt = '<option value="">❌ Failed to load</option>';
+        document.getElementById('loadTplSelect').innerHTML = opt;
+        document.getElementById('schedTplSelect').innerHTML = opt;
+    }
 }
 
 function populateOverlaySelect(sel) {
+    const prevValue = sel.value;
     sel.innerHTML = '<option value="">Select template…</option>';
     overlayTemplates.forEach(t => sel.appendChild(new Option(t.name, t.id)));
+    if (prevValue && overlayTemplates.some(t => t.id === prevValue)) sel.value = prevValue;
 }
 
 async function sendTemplateNow() {
@@ -508,7 +600,8 @@ async function sendTemplateNow() {
     const duration = parseInt(document.getElementById('loadTplDuration').value) || 10;
     try {
         const res = await fetch('/api/trigger-now', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ template_id: id, device_id: device, duration_seconds: duration })
         });
         const json = await res.json();
@@ -523,16 +616,18 @@ async function scheduleTemplate() {
     const date = document.getElementById('schedTplDate').value;
     const time = document.getElementById('schedTplTime').value;
     if (!date || !time) { showStatus('schedTplStatus', 'Pick a date and time', false); return; }
-    const start = new Date(`${date}T${time}`).toISOString();
     const device = document.getElementById('schedTplDevice').value.trim() || 'phone1';
     const duration = parseInt(document.getElementById('schedTplDuration').value) || 10;
+    const startDatetime = new Date(`${date}T${time}`).toISOString();
     try {
         const res = await fetch('/api/schedules', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ template_id: id, device_id: device, start_datetime: start, duration_seconds: duration, repeat_interval_seconds: 0, repeat_qty: 1, loop_count: 1, is_active: true })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ template_id: id, device_id: device, start_datetime: startDatetime, duration_seconds: duration, is_active: true })
         });
-        if (!res.ok) throw new Error('Failed to save schedule');
-        showStatus('schedTplStatus', `✅ Scheduled for ${new Date(start).toLocaleString()}`, true);
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        showStatus('schedTplStatus', `✅ Scheduled for ${new Date(startDatetime).toLocaleString()}`, true);
         loadSchedules();
     } catch(err) { showStatus('schedTplStatus', `❌ ${err.message}`, false); }
 }
@@ -541,17 +636,33 @@ async function loadSchedules() {
     try {
         const res = await fetch('/api/schedules');
         schedules = await res.json();
-        const tbody = document.getElementById('scheduleTableBody');
-        if (!schedules.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No schedules yet</td></tr>'; return; }
-        let rows = '';
-        for (let s of schedules) {
-            const tmpl = overlayTemplates.find(t => t.id === s.template_id);
-            const tName = tmpl ? tmpl.name : 'Unknown';
-            rows += `<tr><td>${escapeHtml(tName)}</td><td>${escapeHtml(s.device_id)}</td><td>${new Date(s.start_datetime).toLocaleString()}</td><td>${s.duration_seconds}s</td><td><span class="badge ${s.is_active ? 'badge-active' : 'badge-inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td><td><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">Del</button></td></tr>`;
-        }
-        tbody.innerHTML = rows;
+        renderScheduleTable();
         document.getElementById('lastRefresh').textContent = `Last: ${new Date().toLocaleTimeString()}`;
     } catch(e) { console.error(e); }
+}
+
+function renderScheduleTable() {
+    const tbody = document.getElementById('scheduleTableBody');
+    if (!schedules.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><h3>📭 No schedules yet</h3><p>Use the form above to create one</p></td></tr>';
+        return;
+    }
+    let rows = '';
+    for (let s of schedules) {
+        const tmpl = overlayTemplates.find(t => t.id === s.template_id);
+        const tName = tmpl ? tmpl.name : (s.templates?.name || 'Unknown');
+        const cls = s.is_active ? 'badge-active' : 'badge-inactive';
+        const txt = s.is_active ? 'Active' : 'Inactive';
+        rows += `<tr>
+            <td>${escapeHtml(tName)}</td>
+            <td>${escapeHtml(s.device_id || 'phone1')}</td>
+            <td>${new Date(s.start_datetime).toLocaleString()}</td>
+            <td>${s.duration_seconds}s</td>
+            <td><span class="badge ${cls}">${txt}</span></td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">Del</button></td>
+        </tr>`;
+    }
+    tbody.innerHTML = rows;
 }
 
 async function deleteSchedule(id) {
@@ -562,11 +673,13 @@ async function deleteSchedule(id) {
     } catch(e) { alert('Error: ' + e.message); }
 }
 
+// ------------------- REALTIME -------------------
 sbClient.channel('device-state-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'device_state' }, () => refreshDeviceState()).subscribe();
 sbClient.channel('schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => loadSchedules()).subscribe();
 sbClient.channel('js-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'js_schedules' }, () => loadJsSchedules()).subscribe();
 sbClient.channel('js-templates-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'js_templates' }, () => loadJsTemplates()).subscribe();
 
+// ------------------- BOOT -------------------
 loadJsTemplates();
 loadOverlayTemplates().then(loadSchedules);
 loadJsSchedules();
