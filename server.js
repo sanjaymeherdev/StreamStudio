@@ -453,6 +453,7 @@ app.get('/api/schedules', async (req, res) => {
         if (error) throw error
         res.json(data)
     } catch (error) {
+        console.error('[/api/schedules] ERROR:', error.message)
         res.status(500).json({ error: error.message })
     }
 })
