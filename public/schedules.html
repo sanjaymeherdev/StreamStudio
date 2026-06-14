@@ -797,10 +797,15 @@ async function scheduleTemplate() {
 async function loadSchedules() {
     try {
         const res = await fetch('/api/schedules');
-        schedules = await res.json();
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        const data = await res.json();
+        schedules = Array.isArray(data) ? data : [];
         renderScheduleTable();
         document.getElementById('lastRefresh').textContent = `Last: ${new Date().toLocaleTimeString()}`;
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        console.error('loadSchedules failed:', e);
+        schedules = [];
+    }
     renderCalendar();
 }
 
@@ -900,11 +905,11 @@ function cancelEditJsSchedule() {
 // ------------------- CALENDAR -------------------
 function eventsByDateMap() {
     const map = {};
-    schedules.forEach(s => {
+    (schedules || []).forEach(s => {
         const d = fmtDate(new Date(s.start_datetime));
         (map[d] = map[d] || []).push('tpl');
     });
-    jsSchedules.forEach(s => {
+    (jsSchedules || []).forEach(s => {
         const d = fmtDate(new Date(s.send_at));
         (map[d] = map[d] || []).push('js');
     });
@@ -913,7 +918,7 @@ function eventsByDateMap() {
 
 function getEventsForDate(dStr) {
     const events = [];
-    schedules.forEach(s => {
+    (schedules || []).forEach(s => {
         const dt = new Date(s.start_datetime);
         if (fmtDate(dt) !== dStr) return;
         const tmpl = overlayTemplates.find(t => t.id === s.template_id);
@@ -924,7 +929,7 @@ function getEventsForDate(dStr) {
             duration: s.duration_seconds, is_active: s.is_active
         });
     });
-    jsSchedules.forEach(s => {
+    (jsSchedules || []).forEach(s => {
         const dt = new Date(s.send_at);
         if (fmtDate(dt) !== dStr) return;
         events.push({
@@ -936,7 +941,6 @@ function getEventsForDate(dStr) {
     events.sort((a,b) => a.time - b.time);
     return events;
 }
-
 function renderCalendar() {
     if (calView === 'month') renderMonthGrid(); else renderWeekGrid();
     if (selectedDate) renderDayDetail(selectedDate);
