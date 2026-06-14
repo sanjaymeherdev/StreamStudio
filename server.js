@@ -443,7 +443,58 @@ function renderOverlayHTML(design) {
 // ============================================
 // SCHEDULE CRUD
 // ============================================
+async function triggerDueJsSchedules() {
+    // Server runs in UTC, js_schedules stores local IST time (no timezone)
+    // So we compare against IST "now" formatted as a plain datetime string
+    const now = new Date();
+    // IST = UTC + 5:30
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + istOffset);
+    // Format as "YYYY-MM-DDTHH:MM:SS" — same format stored in DB
+    const checkTime = istNow.toISOString().replace('Z', '').split('.')[0];
 
+    const { data: due, error } = await supabase
+        .from('js_schedules')
+        .select('*')
+        .eq('sent', false)
+        .lte('send_at', checkTime);
+
+    if (error) {
+        console.error('[js-scheduler] Query error:', error.message);
+        return;
+    }
+
+    if (!due || due.length === 0) return;
+
+    console.log(`[js-scheduler] Found ${due.length} due JS schedule(s)`);
+
+    for (const s of due) {
+        try {
+            // Inject the JS
+            const { error: injectError } = await supabase
+                .from('overlay_injects')
+                .insert([{
+                    js_code: s.js_code,
+                    device_slug: s.device_slug || null,
+                    template_name: s.template_name || null,
+                    created_at: new Date(),
+                    status: 'pending'
+                }]);
+
+            if (injectError) throw injectError;
+
+            // Mark as sent
+            await supabase
+                .from('js_schedules')
+                .update({ sent: true, updated_at: new Date() })
+                .eq('id', s.id);
+
+            console.log(`[js-scheduler] ✅ Fired: "${s.template_name}" (id: ${s.id})`);
+        } catch (err) {
+            console.error(`[js-scheduler] ❌ Failed id ${s.id}:`, err.message);
+        }
+    }
+}
 app.get('/api/schedules', async (req, res) => {
     try {
         const { data, error } = await supabase
