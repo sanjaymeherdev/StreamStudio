@@ -17,7 +17,6 @@
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
         .refresh-indicator { font-size: 12px; color: #8892b0; margin-left: 10px; }
 
-        /* Tabs */
         .tabs { display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 2px solid #0f3460; flex-wrap: wrap; }
         .tab { padding: 10px 22px; background: none; border: none; color: #888; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s; }
         .tab.active { color: #e94560; border-bottom-color: #e94560; background: rgba(233,69,96,0.05); }
@@ -25,7 +24,6 @@
         .tab-panel.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Panels & Cards */
         .panel { background: #16213e; border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid #0f3460; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: 0.2s; }
         .panel h2 { font-size: 18px; margin-bottom: 18px; color: #e94560; display: flex; align-items: center; gap: 8px; letter-spacing: -0.2px; }
         .panel .hint { font-size: 13px; color: #8892b0; margin-bottom: 16px; }
@@ -40,7 +38,6 @@
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #e94560; box-shadow: 0 0 0 2px rgba(233,69,96,0.2); }
         .form-group textarea { min-height: 140px; resize: vertical; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
 
-        /* Buttons */
         .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
         .btn-primary { background: #e94560; color: #fff; }
         .btn-primary:hover { background: #ff6b6b; transform: translateY(-1px); }
@@ -83,7 +80,6 @@
         .empty-state h3 { margin-bottom: 8px; color: #a0aec0; font-weight: 500; }
         code { background: #0f3460; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-family: monospace; }
 
-        .controls { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
         .section-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; background:#e94560; color:#fff; font-size:12px; font-weight:800; flex-shrink:0; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         @media (max-width: 700px) {
@@ -108,7 +104,6 @@
         </div>
     </header>
 
-    <!-- TABS -->
     <div class="tabs">
         <button class="tab active" onclick="switchTab('quick')">⚡ Quick Actions</button>
         <button class="tab" onclick="switchTab('js')">🎬 JS Inject</button>
@@ -132,9 +127,7 @@
 
         <div class="panel">
             <h2>🔗 Push URL to Device</h2>
-            <p class="hint">
-                Instantly set <code>active_url</code> on <code>device_state</code> — the device will load whatever URL you enter.
-            </p>
+            <p class="hint">Instantly set <code>active_url</code> on <code>device_state</code>.</p>
             <div class="url-row">
                 <div class="form-group">
                     <label>Device ID</label>
@@ -155,14 +148,8 @@
 
     <!-- TAB 2: JS INJECT -->
     <div id="tab-js" class="tab-panel">
-
-        <!-- SECTION 1: RUN EXISTING IMMEDIATELY -->
         <div class="panel">
             <h2><span class="section-num">1</span> Run Existing JS Now</h2>
-            <p class="hint">
-                Pick a saved JS template (file-based or custom), fill any <code>{{placeholders}}</code>, and send it
-                straight to <code>overlay_injects</code> via Supabase Realtime.
-            </p>
             <div class="form-group">
                 <label>JS Template</label>
                 <select id="runJsSelect" onchange="onRunJsChange()">
@@ -178,13 +165,8 @@
             <div class="status-msg" id="runJsStatus"></div>
         </div>
 
-        <!-- SECTION 2: SCHEDULE -->
         <div class="panel">
             <h2><span class="section-num">2</span> Schedule JS Inject</h2>
-            <p class="hint">
-                Pick a template, fill placeholders, choose a date &amp; time — it will be saved to
-                <code>js_schedules</code> and sent automatically.
-            </p>
             <div class="form-group">
                 <label>JS Template</label>
                 <select id="scheduleJsSelect" onchange="onScheduleJsChange()">
@@ -208,26 +190,16 @@
             </div>
             <button class="btn btn-primary" onclick="scheduleJsInject()">⏰ Schedule</button>
             <div class="status-msg" id="jsSchedStatus"></div>
-
             <div class="table-container">
                 <table>
-                    <thead>
-                        <tr><th>Template</th><th>Device Slug</th><th>Send At</th><th>Status</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody id="jsScheduleTableBody">
-                        <tr><td colspan="5" class="empty-state"><h3>Loading…</h3></td></tr>
-                    </tbody>
+                    <thead><tr><th>Template</th><th>Device Slug</th><th>Send At</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="jsScheduleTableBody"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- SECTION 3: CREATE JS TEMPLATE -->
         <div class="panel">
             <h2><span class="section-num">3</span> Create JS Template</h2>
-            <p class="hint">
-                Write JS that calls <code>renderTemplate(...)</code>. Use <code>{{placeholder}}</code> tokens for any
-                values you want to fill in later. Once saved, this template appears in the dropdowns above (Run Now &amp; Schedule).
-            </p>
             <div class="form-group">
                 <label>Template Name</label>
                 <input type="text" id="newTplName" placeholder="e.g. lower-third-name">
@@ -243,16 +215,11 @@
 
     <!-- TAB 3: TEMPLATES -->
     <div id="tab-templates" class="tab-panel">
-
-        <!-- SECTION 1: LOAD TO STREAM -->
         <div class="panel">
             <h2><span class="section-num">1</span> Load Template to Stream</h2>
-            <p class="hint">Select an overlay template and push it to the device right now.</p>
             <div class="form-group">
                 <label>Template</label>
-                <select id="loadTplSelect">
-                    <option value="">Loading templates…</option>
-                </select>
+                <select id="loadTplSelect"><option value="">Loading templates…</option></select>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -268,15 +235,11 @@
             <div class="status-msg" id="loadTplStatus"></div>
         </div>
 
-        <!-- SECTION 2: SCHEDULE -->
         <div class="panel">
             <h2><span class="section-num">2</span> Schedule Template</h2>
-            <p class="hint">Select a template, choose a date &amp; time, and it will be triggered automatically.</p>
             <div class="form-group">
                 <label>Template</label>
-                <select id="schedTplSelect">
-                    <option value="">Loading templates…</option>
-                </select>
+                <select id="schedTplSelect"><option value="">Loading templates…</option></select>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -302,20 +265,15 @@
             <div class="status-msg" id="schedTplStatus"></div>
         </div>
 
-        <!-- EXISTING SCHEDULES TABLE -->
         <div class="panel">
-            <div class="flex-between" style="margin-bottom:0">
+            <div class="flex-between">
                 <h2 style="margin-bottom:0">📋 Scheduled Templates</h2>
                 <button class="btn btn-secondary btn-sm" onclick="loadSchedules()">🔄 Refresh</button>
             </div>
             <div class="table-container">
                 <table>
-                    <thead>
-                        <tr><th>Template</th><th>Device</th><th>Start</th><th>Duration</th><th>Status</th><th>Actions</th></tr>
-                    </thead>
-                    <tbody id="scheduleTableBody">
-                        <tr><td colspan="6" class="empty-state"><h3>Loading schedules…</h3></td></tr>
-                    </tbody>
+                    <thead><tr><th>Template</th><th>Device</th><th>Start</th><th>Duration</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="scheduleTableBody"><tr><td colspan="6" class="empty-state">Loading schedules…</td></tr></tbody>
                 </table>
             </div>
         </div>
@@ -324,7 +282,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ------------------- CONFIG --------------------
 const SUPABASE_URL = 'https://yfjzvpzgecbnfysacbjq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlmanp2cHpnZWNibmZ5c2FjYmpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5OTY2MzcsImV4cCI6MjA4MzU3MjYzN30.v27rjgUTGuHAq6sAjhjQYWb-Y9O23f5FpwXQBFZyjmQ';
 const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -334,7 +291,6 @@ let overlayTemplates = [];
 let schedules = [];
 let jsSchedules = [];
 
-// ------------------- HELPERS -------------------
 function showStatus(elId, msg, isOk) {
     const el = document.getElementById(elId);
     el.textContent = msg;
@@ -359,19 +315,15 @@ function switchTab(name) {
     document.querySelectorAll('.tab')[idx].classList.add('active');
 }
 
-// ------------------- DEVICE STATE -------------------
 async function refreshDeviceState() {
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/device_state?device_id=eq.phone1`, {
-            headers: sbHeaders()
-        });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/device_state?device_id=eq.phone1`, { headers: sbHeaders() });
         const data = await res.json();
         if (data && data[0]) {
             const d = data[0];
-            const url = d.active_url || '/home';
-            document.getElementById('deviceActiveUrl').textContent = url;
+            document.getElementById('deviceActiveUrl').textContent = d.active_url || '/home';
             document.getElementById('deviceDot').className = 'dot online';
-            document.getElementById('deviceStatus').innerHTML = `🕒 Updated: ${d.updated_at ? new Date(d.updated_at).toLocaleString() : '—'} ${d.overlay_active_until ? ` | ⏱️ Overlay until: ${new Date(d.overlay_active_until).toLocaleString()}` : ''}`;
+            document.getElementById('deviceStatus').innerHTML = `🕒 Updated: ${d.updated_at ? new Date(d.updated_at).toLocaleString() : '—'}`;
         } else {
             document.getElementById('deviceActiveUrl').textContent = 'No device';
             document.getElementById('deviceDot').className = 'dot';
@@ -390,8 +342,7 @@ function updateDeviceUrl(deviceId, url, overlayUntil) {
     }).then(r => { if(!r.ok) throw new Error(); refreshDeviceState(); return r; });
 }
 
-function clearDevice() { updateDeviceUrl('phone1', '/home', null); showStatus('urlStatus', 'Cleared overlay, back to home', true); }
-
+function clearDevice() { updateDeviceUrl('phone1', '/home', null); showStatus('urlStatus', 'Cleared overlay', true); }
 function pushUrl() {
     const deviceId = document.getElementById('urlDeviceId').value.trim() || 'phone1';
     const url = document.getElementById('urlToPush').value.trim();
@@ -400,58 +351,27 @@ function pushUrl() {
     showStatus('urlStatus', `✅ URL pushed to ${deviceId}`, true);
 }
 
-// ------------------- JS TEMPLATES (Section 1 & 2 dropdowns) -------------------
 async function loadJsTemplates() {
     try {
         const res = await fetch('/api/js-templates');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         jsTemplates = await res.json();
         populateJsSelect(document.getElementById('runJsSelect'));
         populateJsSelect(document.getElementById('scheduleJsSelect'));
-    } catch(e) {
-        console.error('Failed to load JS templates:', e);
-        const opt = '<option value="">❌ Failed to load - check console</option>';
-        document.getElementById('runJsSelect').innerHTML = opt;
-        document.getElementById('scheduleJsSelect').innerHTML = opt;
-    }
+    } catch(e) { console.error(e); }
 }
 
 function populateJsSelect(sel) {
-    const prevValue = sel.value;
     sel.innerHTML = '<option value="">Select a JS template…</option>';
-
-    const categories = {};
     jsTemplates.forEach(t => {
-        const cat = t.category || 'general';
-        if (!categories[cat]) categories[cat] = [];
-        categories[cat].push(t);
+        sel.appendChild(new Option(`${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id));
     });
-
-    Object.keys(categories).sort().forEach(cat => {
-        const group = document.createElement('optgroup');
-        group.label = cat.charAt(0).toUpperCase() + cat.slice(1);
-        categories[cat].forEach(t => {
-            const sourceBadge = t.source === 'database' ? '🗄️' : '📁';
-            group.appendChild(new Option(`${sourceBadge} ${t.name} ${t.placeholders?.length ? `(${t.placeholders.length} vars)` : ''}`, t.id));
-        });
-        sel.appendChild(group);
-    });
-
-    if (prevValue && jsTemplates.some(t => t.id === prevValue)) {
-        sel.value = prevValue;
-    }
 }
 
-function findJsTemplate(id) {
-    return jsTemplates.find(t => t.id === id) || null;
-}
+function findJsTemplate(id) { return jsTemplates.find(t => t.id === id) || null; }
 
 function renderPlaceholders(tpl, gridEl, prefix) {
     gridEl.innerHTML = '';
-    if (!tpl || !tpl.placeholders?.length) {
-        gridEl.style.display = 'none';
-        return;
-    }
+    if (!tpl || !tpl.placeholders?.length) { gridEl.style.display = 'none'; return; }
     gridEl.style.display = 'grid';
     tpl.placeholders.forEach(ph => {
         const chip = document.createElement('div');
@@ -473,7 +393,6 @@ function buildJsCode(tpl, prefix) {
     return code;
 }
 
-// ---- SECTION 1: RUN NOW ----
 function onRunJsChange() {
     const tpl = findJsTemplate(document.getElementById('runJsSelect').value);
     renderPlaceholders(tpl, document.getElementById('runPlaceholderGrid'), 'run');
@@ -495,7 +414,6 @@ async function runJsNow() {
     } catch(err) { showStatus('runJsStatus', `❌ ${err.message}`, false); }
 }
 
-// ---- SECTION 2: SCHEDULE ----
 function onScheduleJsChange() {
     const tpl = findJsTemplate(document.getElementById('scheduleJsSelect').value);
     renderPlaceholders(tpl, document.getElementById('scheduleJsPlaceholderGrid'), 'sched');
@@ -504,26 +422,17 @@ function onScheduleJsChange() {
 async function scheduleJsInject() {
     const tpl = findJsTemplate(document.getElementById('scheduleJsSelect').value);
     if (!tpl) { showStatus('jsSchedStatus', 'Select a template', false); return; }
-
     const date = document.getElementById('jsSchedDate').value;
     const time = document.getElementById('jsSchedTime').value;
     if (!date || !time) { showStatus('jsSchedStatus', 'Pick a date and time', false); return; }
-
     const sendAt = new Date(`${date}T${time}`).toISOString();
     const code = buildJsCode(tpl, 'sched');
     const deviceSlug = document.getElementById('jsSchedDeviceSlug').value.trim() || null;
-
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules`, {
             method: 'POST',
             headers: sbHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
-            body: JSON.stringify({
-                template_name: tpl.name,
-                js_code: code,
-                device_slug: deviceSlug,
-                send_at: sendAt,
-                sent: false
-            })
+            body: JSON.stringify({ template_name: tpl.name, js_code: code, device_slug: deviceSlug, send_at: sendAt, sent: false })
         });
         if (!res.ok) throw new Error(await res.text());
         showStatus('jsSchedStatus', `✅ Scheduled for ${new Date(sendAt).toLocaleString()}`, true);
@@ -535,51 +444,27 @@ async function loadJsSchedules() {
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?order=send_at.asc`, { headers: sbHeaders() });
         jsSchedules = await res.json();
-        renderJsScheduleTable();
-    } catch(e) {
-        console.error(e);
-        document.getElementById('jsScheduleTableBody').innerHTML = '<tr><td colspan="5" class="empty-state"><h3>⚠️ Could not load (is the js_schedules table set up?)</h3></td></tr>';
-    }
-}
-
-function renderJsScheduleTable() {
-    const tbody = document.getElementById('jsScheduleTableBody');
-    if (!jsSchedules.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><h3>📭 No scheduled JS injects</h3><p>Use "Schedule" above to add one</p></td></tr>';
-        return;
-    }
-    let rows = '';
-    for (let s of jsSchedules) {
-        const cls = s.sent ? 'badge-sent' : 'badge-pending';
-        const txt = s.sent ? 'Sent' : 'Pending';
-        rows += `<tr>
-            <td>${escapeHtml(s.template_name || 'Unknown')}</td>
-            <td>${escapeHtml(s.device_slug || '—')}</td>
-            <td>${new Date(s.send_at).toLocaleString()}</td>
-            <td><span class="badge ${cls}">${txt}</span></td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteJsSchedule('${s.id}')">Del</button></td>
-        </tr>`;
-    }
-    tbody.innerHTML = rows;
+        const tbody = document.getElementById('jsScheduleTableBody');
+        if (!jsSchedules.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No scheduled JS injects</td></tr>'; return; }
+        let rows = '';
+        for (let s of jsSchedules) {
+            rows += `<tr><td>${escapeHtml(s.template_name)}</td><td>${escapeHtml(s.device_slug || '—')}</td><td>${new Date(s.send_at).toLocaleString()}</td><td><span class="badge ${s.sent ? 'badge-sent' : 'badge-pending'}">${s.sent ? 'Sent' : 'Pending'}</span></td><td><button class="btn btn-danger btn-sm" onclick="deleteJsSchedule('${s.id}')">Del</button></td></tr>`;
+        }
+        tbody.innerHTML = rows;
+    } catch(e) { console.error(e); }
 }
 
 async function deleteJsSchedule(id) {
     if (!confirm('Delete this scheduled JS inject?')) return;
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?id=eq.${id}`, {
-            method: 'DELETE',
-            headers: sbHeaders({ 'Prefer': 'return=minimal' })
-        });
-        if (!res.ok) throw new Error();
+        await fetch(`${SUPABASE_URL}/rest/v1/js_schedules?id=eq.${id}`, { method: 'DELETE', headers: sbHeaders({ 'Prefer': 'return=minimal' }) });
         loadJsSchedules();
     } catch(e) { alert('Error deleting schedule'); }
 }
 
-// ---- SECTION 3: CREATE JS TEMPLATE ----
 function extractPlaceholders(code) {
     const matches = code.match(/\{\{(\w+)\}\}/g) || [];
-    const unique = [...new Set(matches.map(m => m.replace(/[{}]/g, '')))];
-    return unique;
+    return [...new Set(matches.map(m => m.replace(/[{}]/g, '')))];
 }
 
 async function saveNewJsTemplate() {
@@ -587,59 +472,43 @@ async function saveNewJsTemplate() {
     const code = document.getElementById('newTplCode').value;
     if (!name) { showStatus('newTplStatus', 'Enter a template name', false); return; }
     if (!code.trim()) { showStatus('newTplStatus', 'Enter JS code', false); return; }
-
     const placeholders = extractPlaceholders(code);
     try {
         const res = await fetch('/api/js-templates', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, js_code: code, placeholders, category: 'general' })
         });
         const json = await res.json();
         if (json.error) throw new Error(json.error);
-
-        showStatus('newTplStatus', `✅ Saved "${name}" — now available in dropdowns above`, true);
+        showStatus('newTplStatus', `✅ Saved "${name}"`, true);
         document.getElementById('newTplName').value = '';
         document.getElementById('newTplCode').value = '';
         await loadJsTemplates();
-    } catch(err) {
-        showStatus('newTplStatus', `❌ ${err.message}`, false);
-    }
+    } catch(err) { showStatus('newTplStatus', `❌ ${err.message}`, false); }
 }
 
-// ------------------- OVERLAY TEMPLATES (Templates tab) -------------------
 async function loadOverlayTemplates() {
     try {
         const res = await fetch('/api/templates');
         overlayTemplates = await res.json();
         populateOverlaySelect(document.getElementById('loadTplSelect'));
         populateOverlaySelect(document.getElementById('schedTplSelect'));
-    } catch(e) {
-        console.error(e);
-        const opt = '<option value="">❌ Failed to load</option>';
-        document.getElementById('loadTplSelect').innerHTML = opt;
-        document.getElementById('schedTplSelect').innerHTML = opt;
-    }
+    } catch(e) { console.error(e); }
 }
 
 function populateOverlaySelect(sel) {
-    const prevValue = sel.value;
     sel.innerHTML = '<option value="">Select template…</option>';
     overlayTemplates.forEach(t => sel.appendChild(new Option(t.name, t.id)));
-    if (prevValue && overlayTemplates.some(t => t.id === prevValue)) sel.value = prevValue;
 }
 
-// ---- SECTION 1: LOAD TO STREAM ----
 async function sendTemplateNow() {
     const id = document.getElementById('loadTplSelect').value;
     if (!id) { showStatus('loadTplStatus', 'Select a template', false); return; }
     const device = document.getElementById('loadTplDevice').value.trim() || 'phone1';
     const duration = parseInt(document.getElementById('loadTplDuration').value) || 10;
-
     try {
         const res = await fetch('/api/trigger-now', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ template_id: id, device_id: device, duration_seconds: duration })
         });
         const json = await res.json();
@@ -648,65 +517,41 @@ async function sendTemplateNow() {
     } catch(err) { showStatus('loadTplStatus', `❌ ${err.message}`, false); }
 }
 
-// ---- SECTION 2: SCHEDULE TEMPLATE ----
--- Check if table exists
-SELECT EXISTS (
-    SELECT FROM information_schema.tables 
-    WHERE table_name = 'schedules'
-);
-
--- If not exists, create it
-CREATE TABLE IF NOT EXISTS schedules (
-    id SERIAL PRIMARY KEY,
-    template_id INTEGER NOT NULL,
-    device_id TEXT DEFAULT 'phone1',
-    start_datetime TIMESTAMP NOT NULL,
-    end_datetime TIMESTAMP,
-    repeat_interval_seconds INTEGER DEFAULT 0,
-    repeat_qty INTEGER DEFAULT 1,
-    loop_count INTEGER DEFAULT 1,
-    duration_seconds INTEGER DEFAULT 10,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Add foreign key to templates (if templates table exists)
-ALTER TABLE schedules 
-ADD CONSTRAINT fk_template 
-FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE;
+async function scheduleTemplate() {
+    const id = document.getElementById('schedTplSelect').value;
+    if (!id) { showStatus('schedTplStatus', 'Select a template', false); return; }
+    const date = document.getElementById('schedTplDate').value;
+    const time = document.getElementById('schedTplTime').value;
+    if (!date || !time) { showStatus('schedTplStatus', 'Pick a date and time', false); return; }
+    const start = new Date(`${date}T${time}`).toISOString();
+    const device = document.getElementById('schedTplDevice').value.trim() || 'phone1';
+    const duration = parseInt(document.getElementById('schedTplDuration').value) || 10;
+    try {
+        const res = await fetch('/api/schedules', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ template_id: id, device_id: device, start_datetime: start, duration_seconds: duration, repeat_interval_seconds: 0, repeat_qty: 1, loop_count: 1, is_active: true })
+        });
+        if (!res.ok) throw new Error('Failed to save schedule');
+        showStatus('schedTplStatus', `✅ Scheduled for ${new Date(start).toLocaleString()}`, true);
+        loadSchedules();
+    } catch(err) { showStatus('schedTplStatus', `❌ ${err.message}`, false); }
+}
 
 async function loadSchedules() {
     try {
         const res = await fetch('/api/schedules');
         schedules = await res.json();
-        renderScheduleTable();
+        const tbody = document.getElementById('scheduleTableBody');
+        if (!schedules.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No schedules yet</td></tr>'; return; }
+        let rows = '';
+        for (let s of schedules) {
+            const tmpl = overlayTemplates.find(t => t.id === s.template_id);
+            const tName = tmpl ? tmpl.name : 'Unknown';
+            rows += `<tr><td>${escapeHtml(tName)}</td><td>${escapeHtml(s.device_id)}</td><td>${new Date(s.start_datetime).toLocaleString()}</td><td>${s.duration_seconds}s</td><td><span class="badge ${s.is_active ? 'badge-active' : 'badge-inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td><td><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">Del</button></td></tr>`;
+        }
+        tbody.innerHTML = rows;
         document.getElementById('lastRefresh').textContent = `Last: ${new Date().toLocaleTimeString()}`;
     } catch(e) { console.error(e); }
-}
-
-function renderScheduleTable() {
-    const tbody = document.getElementById('scheduleTableBody');
-    if (!schedules.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><h3>📭 No schedules yet</h3><p>Use the form above to create one</p></td></tr>';
-        return;
-    }
-    let rows = '';
-    for (let s of schedules) {
-        const tmpl = overlayTemplates.find(t => t.id === s.template_id);
-        const tName = tmpl ? tmpl.name : (s.templates?.name || 'Unknown');
-        const cls = s.is_active ? 'badge-active' : 'badge-inactive';
-        const txt = s.is_active ? 'Active' : 'Inactive';
-        rows += `<tr>
-            <td>${escapeHtml(tName)}</td>
-            <td>${escapeHtml(s.device_id || 'phone1')}</td>
-            <td>${new Date(s.start_datetime).toLocaleString()}</td>
-            <td>${s.duration_seconds}s</td>
-            <td><span class="badge ${cls}">${txt}</span></td>
-            <td><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">Del</button></td>
-        </tr>`;
-    }
-    tbody.innerHTML = rows;
 }
 
 async function deleteSchedule(id) {
@@ -717,13 +562,11 @@ async function deleteSchedule(id) {
     } catch(e) { alert('Error: ' + e.message); }
 }
 
-// ------------------- REALTIME -------------------
 sbClient.channel('device-state-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'device_state' }, () => refreshDeviceState()).subscribe();
 sbClient.channel('schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => loadSchedules()).subscribe();
 sbClient.channel('js-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'js_schedules' }, () => loadJsSchedules()).subscribe();
 sbClient.channel('js-templates-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'js_templates' }, () => loadJsTemplates()).subscribe();
 
-// ------------------- BOOT -------------------
 loadJsTemplates();
 loadOverlayTemplates().then(loadSchedules);
 loadJsSchedules();
