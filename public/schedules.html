@@ -484,7 +484,9 @@ async function scheduleJsInject() {
     const date = document.getElementById('jsSchedDate').value;
     const time = document.getElementById('jsSchedTime').value;
     if (!date || !time) { showStatus('jsSchedStatus', 'Pick a date and time', false); return; }
-    const sendAt = new Date(`${date}T${time}`).toISOString();
+    // Store as-is without UTC conversion — column is TIMESTAMP WITHOUT TIME ZONE
+    // so we send the local datetime string directly (e.g. "2026-06-14T12:09:00")
+    const sendAt = `${date}T${time}:00`;
     const code = buildJsCode(tpl, 'sched');
     const deviceSlug = document.getElementById('jsSchedDeviceSlug').value.trim() || null;
     try {
@@ -494,7 +496,7 @@ async function scheduleJsInject() {
             body: JSON.stringify({ template_name: tpl.name, js_code: code, device_slug: deviceSlug, send_at: sendAt, sent: false })
         });
         if (!res.ok) throw new Error(await res.text());
-        showStatus('jsSchedStatus', `✅ Scheduled for ${new Date(sendAt).toLocaleString()}`, true);
+        showStatus('jsSchedStatus', `✅ Scheduled for ${new Date(`${sendAt}+05:30`).toLocaleString()}`, true);
         loadJsSchedules();
     } catch(err) { showStatus('jsSchedStatus', `❌ ${err.message}`, false); }
 }
