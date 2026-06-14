@@ -832,15 +832,19 @@ setInterval(async () => {
         const response = await fetch(`http://localhost:${PORT}/api/trigger-schedules`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
-        })
-        const result = await response.json()
+        });
+        const result = await response.json();
         if (result.triggered > 0) {
-            console.log(`[self-cron] Triggered ${result.triggered} overlay(s)`)
+            console.log(`[self-cron] Triggered ${result.triggered} overlay(s)`);
         }
+        
+        // Also trigger JS schedules
+        await triggerDueJsSchedules();
+        
     } catch (err) {
-        // Silent fail - will retry next minute
+        // Silent fail
     }
-}, 60 * 1000) // Every 60 seconds
+}, 60 * 1000); // Every 60 seconds
 // ============================================
 // JSON TO HTML CONVERTER (Overlay Builder)
 // ============================================
