@@ -21,6 +21,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 // Middleware
 app.use(express.json())
+// Add after app.use(express.json())
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
 app.use(express.static(path.join(__dirname, 'public')))
 
 // ============================================
@@ -523,53 +528,61 @@ app.delete('/api/schedule/:id', async (req, res) => {
 // ============================================
 
 async function triggerDueSchedules() {
-    console.log('[scheduler] Checking due schedules at', new Date().toISOString())
+    const checkTime = new Date().toISOString();
+    console.log('[scheduler] 🔍 Checking due schedules at', checkTime);
     
-    // Get due schedules directly from Supabase
     const { data: dueSchedules, error } = await supabase
         .from('schedules')
         .select('id, template_id, device_id, duration_seconds, repeat_qty')
         .eq('is_active', true)
-        .lte('start_datetime', new Date().toISOString())
-        .or(`end_datetime.is.null,end_datetime.gte.${new Date().toISOString()}`)
+        .lte('start_datetime', checkTime)
+        .or(`end_datetime.is.null,end_datetime.gte.${checkTime}`);
     
     if (error) {
-        console.error('[scheduler] Error:', error.message)
-        return { triggered: 0 }
+        console.error('[scheduler] ❌ Query error:', error.message);
+        return { triggered: 0, error: error.message };
     }
     
-    // Filter out schedules that already reached repeat limit
-    let triggered = 0
+    console.log('[scheduler] Found', dueSchedules?.length || 0, 'due schedules');
+    
+    let triggered = 0;
     
     for (const schedule of dueSchedules || []) {
-        // Check repeat limit
+        console.log('[scheduler] Processing schedule:', schedule.id, 'for device:', schedule.device_id);
+        
         const { count, error: countError } = await supabase
             .from('schedule_logs')
             .select('*', { count: 'exact', head: true })
             .eq('schedule_id', schedule.id)
-            .eq('status', 'completed')
+            .eq('status', 'completed');
         
-        if (countError) continue
+        if (countError) {
+            console.log('[scheduler] ⚠️ Count error for schedule', schedule.id, ':', countError.message);
+            continue;
+        }
         
         if (count >= schedule.repeat_qty) {
-            continue // Skip, already reached repeat limit
+            console.log('[scheduler] ⏭️ Skipping schedule', schedule.id, '- repeat limit reached (', count, '/', schedule.repeat_qty, ')');
+            continue;
         }
         
         try {
-            // Get template
             const { data: template, error: templateError } = await supabase
                 .from('templates')
                 .select('*')
                 .eq('id', schedule.template_id)
-                .single()
+                .single();
             
-            if (templateError || !template) continue
+            if (templateError || !template) {
+                console.log('[scheduler] ❌ Template not found:', schedule.template_id);
+                continue;
+            }
             
-            // Build overlay URL
-            const overlayUrl = `${SELF_URL}/api/overlay/${schedule.template_id}`
+            console.log('[scheduler] ✓ Found template:', template.name);
             
-            // Update device_state
-            await supabase
+            const overlayUrl = `${SELF_URL}/api/overlay/${schedule.template_id}`;
+            
+            const { error: updateError } = await supabase
                 .from('device_state')
                 .update({
                     template_id: schedule.template_id,
@@ -577,9 +590,13 @@ async function triggerDueSchedules() {
                     overlay_active_until: new Date(Date.now() + (schedule.duration_seconds * 1000)).toISOString(),
                     updated_at: new Date()
                 })
-                .eq('device_id', schedule.device_id)
+                .eq('device_id', schedule.device_id);
             
-            // Log success
+            if (updateError) {
+                console.log('[scheduler] ❌ Failed to update device_state:', updateError.message);
+                throw updateError;
+            }
+            
             await supabase
                 .from('schedule_logs')
                 .insert([{
@@ -588,13 +605,13 @@ async function triggerDueSchedules() {
                     device_id: schedule.device_id,
                     status: 'completed',
                     repeat_count: count + 1
-                }])
+                }]);
             
-            triggered++
-            console.log(`[scheduler] Triggered: ${template.name} on ${schedule.device_id}`)
+            triggered++;
+            console.log(`[scheduler] ✅ Triggered: ${template.name} on ${schedule.device_id}`);
             
         } catch (err) {
-            console.error(`[scheduler] Failed schedule ${schedule.id}:`, err)
+            console.error(`[scheduler] ❌ Failed schedule ${schedule.id}:`, err.message);
             await supabase
                 .from('schedule_logs')
                 .insert([{
@@ -603,13 +620,40 @@ async function triggerDueSchedules() {
                     device_id: schedule.device_id,
                     status: 'failed',
                     error_message: err.message
-                }])
+                }]);
         }
     }
     
-    return { triggered, checked_at: new Date().toISOString() }
+    console.log('[scheduler] 📊 Summary - Triggered:', triggered, 'at', new Date().toISOString());
+    return { triggered, checked_at: new Date().toISOString() };
 }
-
+app.get('/health/detailed', async (req, res) => {
+    try {
+        // Check Supabase connection
+        const { data: deviceCheck, error: deviceError } = await supabase
+            .from('device_state')
+            .select('device_id', { count: 'exact', head: true });
+        
+        const { data: injectCheck, error: injectError } = await supabase
+            .from('overlay_injects')
+            .select('id', { count: 'exact', head: true })
+            .order('created_at', { ascending: false })
+            .limit(1);
+        
+        res.json({
+            status: 'ok',
+            timestamp: new Date().toISOString(),
+            supabase: {
+                connected: !deviceError,
+                device_state_count: deviceCheck?.length || 0,
+                last_inject_exists: injectCheck?.length > 0
+            },
+            uptime: process.uptime()
+        });
+    } catch (error) {
+        res.status(500).json({ status: 'error', error: error.message });
+    }
+});
 // Internal endpoint (called by self-cron)
 app.post('/api/trigger-schedules', async (req, res) => {
     try {
@@ -1186,19 +1230,31 @@ function findPlaceholdersInJs(jsCode) {
     
     return placeholders;
 }
-
+// Add this endpoint to receive Android app logs
+app.post('/api/android-log', (req, res) => {
+    const { level, tag, message, device_id } = req.body;
+    console.log(`[Android][${device_id || 'unknown'}][${level || 'info'}][${tag}] ${message}`);
+    res.json({ received: true });
+});
 // POST endpoint to inject JS into Supabase realtime table
 app.post('/api/overlay-inject', async (req, res) => {
     try {
         const { js_code, table_name, device_slug, template_name } = req.body;
         
+        console.log('[overlay-inject] Received request:', {
+            device_slug: device_slug || 'broadcast',
+            template_name: template_name || 'unknown',
+            js_code_length: js_code?.length || 0,
+            timestamp: new Date().toISOString()
+        });
+        
         if (!js_code) {
+            console.log('[overlay-inject] ERROR: No js_code provided');
             return res.status(400).json({ error: 'js_code is required' });
         }
         
         const tableName = table_name || 'overlay_injects';
         
-        // Insert into Supabase table
         const { data, error } = await supabase
             .from(tableName)
             .insert([{
@@ -1211,7 +1267,12 @@ app.post('/api/overlay-inject', async (req, res) => {
             .select()
             .single();
         
-        if (error) throw error;
+        if (error) {
+            console.log('[overlay-inject] Supabase insert ERROR:', error.message);
+            throw error;
+        }
+        
+        console.log('[overlay-inject] SUCCESS - Inserted ID:', data.id, 'at', new Date().toISOString());
         
         res.json({
             success: true,
@@ -1219,7 +1280,7 @@ app.post('/api/overlay-inject', async (req, res) => {
             message: 'JS injected successfully'
         });
     } catch (error) {
-        console.error('Overlay inject error:', error);
+        console.error('[overlay-inject] FAILED:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
